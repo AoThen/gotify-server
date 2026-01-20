@@ -1,0 +1,173 @@
+# Gotify Server with Security Enhancements
+# 
+# This docker-compose.yml includes all security fixes:
+# - Rate limiting (5 requests/sec, burst 10)
+# - Mandatory password change for default user
+# - Security headers (CSP, X-Frame-Options, etc.)
+# - XSS protection via markdown sanitization
+#
+# Usage:
+#   1. Copy this file to docker-compose.yml
+#   2. Customize the environment variables below
+#   3. Run: docker-compose up -d
+#
+# Important Security Notes:
+# - Change GOTIFY_DEFAULT_USER_PASS immediately after first login!
+# - Consider using external database for production
+# - Review CORS settings for your specific needs
+
+services:
+  gotify:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: gotify/server:local
+    container_name: gotify
+    restart: unless-stopped
+    ports:
+      - "80:80"  # HTTP port (change to "8080:80" if 80 is in use)
+      # Uncomment for HTTPS:
+      # - "443:443"
+    
+    # Environment configuration
+    environment:
+      # Server Configuration
+      GOTIFY_SERVER_PORT: "80"
+      GOTIFY_SERVER_KEEPALIVEPERIODSECONDS: "0"
+      GOTIFY_SERVER_LISTENADDR: ""
+      
+      # Rate Limiting (Security Enhancement)
+      GOTIFY_SERVER_RATELIMIT_ENABLED: "true"
+      GOTIFY_SERVER_RATELIMIT_REQUESTSPERSECOND: "5"
+      GOTIFY_SERVER_RATELIMIT_BURST: "10"
+      
+      # SSL/TLS Configuration
+      # GOTIFY_SERVER_SSL_ENABLED: "true"
+      # GOTIFY_SERVER_SSL_REDIRECTTOHTTPS: "true"
+      # GOTIFY_SERVER_SSL_CERTFILE: "/path/to/cert.pem"
+      # GOTIFY_SERVER_SSL_CERTKEY: "/path/to/key.pem"
+      
+      # Database Configuration
+      GOTIFY_DATABASE_DIALECT: "sqlite3"
+      GOTIFY_DATABASE_CONNECTION: "/gotify/data/gotify.db"
+      
+      # Default User (CHANGE IMMEDIATELY AFTER FIRST LOGIN!)
+      GOTIFY_DEFAULTUSER_NAME: "admin"
+      GOTIFY_DEFAULTUSER_PASS: "admin"  # ⚠️ CHANGE THIS PASSWORD!
+      
+      # Password Security
+      GOTIFY_PASSSTRENGTH: "12"  # Higher = more secure but slower
+      
+      # Registration
+      GOTIFY_REGISTRATION: "false"
+      
+      # Directories
+      GOTIFY_UPLOADEDIMAGESDIR: "/gotify/data/images/"
+      GOTIFY_PLUGINSDIR: "/gotify/plugins/"
+      
+      # Trusted Proxies (for reverse proxy setups)
+      # GOTIFY_SERVER_TRUSTEDPROXIES_0: "172.16.0.0/12"
+      # GOTIFY_SERVER_TRUSTEDPROXIES_1: "192.168.0.0/16"
+    
+    # Data persistence
+    volumes:
+      # Database and uploaded files
+      - gotify_data:/gotify/data
+      
+      # Plugin directory (uncomment if using plugins)
+      # - gotify_plugins:/gotify/plugins
+      
+      # SSL certificates (uncomment if using HTTPS)
+      # - ./ssl/cert.pem:/gotify/ssl/cert.pem:ro
+      # - ./ssl/key.pem:/gotify/ssl/key.pem:ro
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Security: Run as non-root user
+    user: "1000:1000"
+    
+    # Security: Read-only filesystem where possible
+    read_only: true
+    
+    # Security: Drop all capabilities and add only what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    # Logging with rotation
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Networks
+    networks:
+      - gotify_network
+
+# Named volumes for persistence
+volumes:
+  gotify_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${GOTIFY_DATA_PATH:-./data}
+
+# Network configuration
+networks:
+  gotify_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ============================================================
+# PRODUCTION EXTERNAL DATABASE EXAMPLE
+# ============================================================
+# Uncomment and modify this section for production use with PostgreSQL:
+#
+# services:
+#   gotify:
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#
+#   postgres:
+#     image: postgres:16-alpine
+#     container_name: gotify-postgres
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_USER: gotify
+#       POSTGRES_PASSWORD: your_secure_password  # Use secrets in production!
+#       POSTGRES_DB: gotify
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U gotify -d gotify"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     networks:
+#       - gotify_network
+#
+# volumes:
+#   postgres_data:
+#     driver: local

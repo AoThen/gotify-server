@@ -169,9 +169,10 @@ func (a *UserAPI) CreateUser(ctx *gin.Context) {
 	user := model.CreateUserExternal{}
 	if err := ctx.Bind(&user); err == nil {
 		internal := &model.User{
-			Name:  user.Name,
-			Admin: user.Admin,
-			Pass:  password.CreatePassword(user.Pass, a.PasswordStrength),
+			Name:               user.Name,
+			Admin:              user.Admin,
+			Pass:               password.CreatePassword(user.Pass, a.PasswordStrength),
+			MustChangePassword: true,
 		}
 		existingUser, err := a.DB.GetUserByName(internal.Name)
 		if success := successOrAbort(ctx, 500, err); !success {
@@ -368,6 +369,7 @@ func (a *UserAPI) ChangePassword(ctx *gin.Context) {
 			return
 		}
 		user.Pass = password.CreatePassword(pw.Pass, a.PasswordStrength)
+		user.MustChangePassword = false
 		successOrAbort(ctx, 500, a.DB.UpdateUser(user))
 	}
 }
@@ -433,10 +435,11 @@ func (a *UserAPI) UpdateUserByID(ctx *gin.Context) {
 					return
 				}
 				internal := &model.User{
-					ID:    oldUser.ID,
-					Name:  user.Name,
-					Admin: user.Admin,
-					Pass:  oldUser.Pass,
+					ID:                 oldUser.ID,
+					Name:               user.Name,
+					Admin:              user.Admin,
+					Pass:               oldUser.Pass,
+					MustChangePassword: oldUser.MustChangePassword,
 				}
 				if user.Pass != "" {
 					internal.Pass = password.CreatePassword(user.Pass, a.PasswordStrength)
@@ -454,8 +457,9 @@ func (a *UserAPI) UpdateUserByID(ctx *gin.Context) {
 
 func toExternalUser(internal *model.User) *model.UserExternal {
 	return &model.UserExternal{
-		Name:  internal.Name,
-		Admin: internal.Admin,
-		ID:    internal.ID,
+		Name:               internal.Name,
+		Admin:              internal.Admin,
+		ID:                 internal.ID,
+		MustChangePassword: internal.MustChangePassword,
 	}
 }

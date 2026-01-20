@@ -40,6 +40,11 @@ type Configuration struct {
 			AllowMethods []string
 			AllowHeaders []string
 		}
+		RateLimit struct {
+			Enabled           bool `default:"true"`
+			RequestsPerSecond int  `default:"5"`
+			Burst             int  `default:"10"`
+		}
 
 		TrustedProxies []string
 	}

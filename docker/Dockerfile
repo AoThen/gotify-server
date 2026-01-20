@@ -1,74 +1,97 @@
-ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
-# Suppress warning about invalid variable expansion
-ARG GO_VERSION=PLEASE_PROVIDE_GO_VERSION
-ARG DEBIAN=sid-slim
+# Gotify Server Dockerfile with Security Enhancements
+# Optimized for amd64 only with simplified build process
 
-# Hack to normalize platform to match the chosed build image
-# Get the gotify/build image tag
-ARG __TARGETPLATFORM_DASHES=${TARGETPLATFORM/\//-}
-ARG __TARGETPLATFORM_GO_NOTATION=${__TARGETPLATFORM_DASHES/arm\/v7/arm-7}
+# ============================================================
+# Build Arguments
+# ============================================================
+ARG GO_VERSION=1.25
+ARG ALPINE_VERSION=3.20
 
-# --- JS Builder ---
+# ============================================================
+# Stage 1: Build JavaScript/TypeScript UI
+# ============================================================
+FROM --platform=amd64 node:24-alpine AS js-builder
 
-FROM --platform=${BUILDPLATFORM} node:24 AS js-builder
+WORKDIR /src/gotify/ui
 
-ARG BUILD_JS=0
+# Copy UI source
+COPY ./ui/package*.json ./
+COPY ./ui/src ./src
 
-COPY ./Makefile /src/gotify/Makefile
-COPY ./ui /src/gotify/ui
+# Install dependencies and build
+RUN npm install && \
+    npm run build
 
-RUN if [ "$BUILD_JS" = "1" ]; then \
-    (cd /src/gotify/ui && yarn install) && \
-    (cd /src/gotify && make build-js) \
-    else \
-    mkdir -p /src/gotify/ui/build; \
-    fi
+# ============================================================
+# Stage 2: Build Go Application
+# ============================================================
+FROM --platform=amd64 docker.io/library/golang:${GO_VERSION}-alpine AS builder
 
-# --- Go Builder ---
+WORKDIR /src/gotify
 
-FROM --platform=${BUILDPLATFORM} gotify/build:${GO_VERSION}-${__TARGETPLATFORM_GO_NOTATION} AS builder
-
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
-ARG BUILD_JS=0
-ARG RUN_TESTS=0 # 0=never, 1=native only
-ARG LD_FLAGS=""
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -yq --no-install-recommends \
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
     ca-certificates \
-    git
-
-COPY . /src/gotify
-COPY --from=js-builder /src/gotify/ui/build /ui-build
-
-RUN if [ "$BUILD_JS" = "1" ]; then \
-    cp -r --update /ui-build /src/gotify/ui/build; \
-    fi
-
-RUN cd /src/gotify && \
-    if [ "$RUN_TESTS" = "1" ] && [ "$BUILDPLATFORM" = "$TARGETPLATFORM" ]; then \
-    go test -v ./...; \
-    fi && \
-    LD_FLAGS=${LD_FLAGS} make OUTPUT=/target/app/gotify-app _build_within_docker
-
-FROM debian:${DEBIAN}
-
-# Build-time configurables
-ARG GOTIFY_SERVER_EXPOSE=80
-ENV GOTIFY_SERVER_PORT=$GOTIFY_SERVER_EXPOSE
-
-WORKDIR /app
-
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -yq --no-install-recommends \
     tzdata \
+    musl-dev
+
+# Copy Go modules
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Copy built UI
+COPY --from=js-builder /src/gotify/ui/build ./ui/build
+
+# Build the application
+# -ldflags: Strip debug info for smaller binary
+# -tags: Include sqlite3, mysql, postgres drivers
+# CGO_ENABLED=1: Alpine uses musl libc, needs CGO for SQLite/MySQL/Postgres
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" \
+    -o /gotify-server \
+    -tags 'sqlite3 mysql postgres' \
+    .
+
+# ============================================================
+# Stage 3: Runtime Image (Minimal Alpine)
+# ============================================================
+FROM --platform=amd64 docker.io/library/alpine:${ALPINE_VERSION}
+
+WORKDIR /gotify
+
+# Install runtime dependencies (Alpine uses musl libc)
+# Note: All drivers must match what was compiled with CGO_ENABLED=1
+RUN apk add --no-cache \
+    ca-certificates \
     curl \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+    tzdata \
+    sqlite \
+    mariadb-client-libs \
+    libpq
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s CMD curl --fail http://localhost:$GOTIFY_SERVER_PORT/health || exit 1
-EXPOSE $GOTIFY_SERVER_EXPOSE
+# Create non-root user
+RUN addgroup -g 1000 gotify && \
+    adduser -u 1000 -G gotify -s /bin/sh -D gotify && \
+    mkdir -p /gotify/data /gotify/images /gotify/plugins && \
+    chown -R gotify:gotify /gotify
 
-COPY --from=builder /target /
+USER gotify
 
-ENTRYPOINT ["./gotify-app"]
+# Health check (use wget instead of curl for smaller size)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
+    CMD wget --spider -q http://localhost:80/health || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Set environment
+ENV GOTIFY_SERVER_PORT=80
+
+# Entry point
+ENTRYPOINT ["/gotify/gotify"]

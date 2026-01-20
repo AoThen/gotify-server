@@ -15,6 +15,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.46.0
+	golang.org/x/time v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0

@@ -2,13 +2,14 @@ package model
 
 // The User holds information about the credentials of a user and its application and client tokens.
 type User struct {
-	ID           uint   `gorm:"primaryKey;autoIncrement"`
-	Name         string `gorm:"type:varchar(180);uniqueIndex:uix_users_name"`
-	Pass         []byte
-	Admin        bool
-	Applications []Application
-	Clients      []Client
-	Plugins      []PluginConf
+	ID                 uint   `gorm:"primaryKey;autoIncrement"`
+	Name               string `gorm:"type:varchar(180);uniqueIndex:uix_users_name"`
+	Pass               []byte
+	MustChangePassword bool `gorm:"default:true"`
+	Admin              bool
+	Applications       []Application
+	Clients            []Client
+	Plugins            []PluginConf
 }
 
 // UserExternal Model
@@ -33,6 +34,11 @@ type UserExternal struct {
 	// required: true
 	// example: true
 	Admin bool `json:"admin" form:"admin" query:"admin"`
+	// If the user must change their password.
+	//
+	// required: true
+	// example: true
+	MustChangePassword bool `json:"mustChangePassword"`
 }
 
 // CreateUserExternal Model

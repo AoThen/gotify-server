@@ -21,6 +21,7 @@ import (
 	"github.com/gotify/server/v2/model"
 	"github.com/gotify/server/v2/plugin"
 	"github.com/gotify/server/v2/ui"
+	"golang.org/x/time/rate"
 )
 
 // Create creates the gin engine with all routes.
@@ -41,6 +42,20 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 
 	g.Use(gin.LoggerWithFormatter(logFormatter), gin.Recovery(), gerror.Handler(), location.Default())
 	g.NoRoute(gerror.NotFound())
+
+	g.Use(func(ctx *gin.Context) {
+		ctx.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
+		ctx.Header("X-Content-Type-Options", "nosniff")
+		ctx.Header("X-Frame-Options", "DENY")
+		ctx.Header("X-XSS-Protection", "1; mode=block")
+		ctx.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+
+		if conf.Server.SSL.Enabled {
+			ctx.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
+		ctx.Next()
+	})
 
 	if conf.Server.SSL.Enabled && conf.Server.SSL.RedirectToHTTPS {
 		g.Use(func(ctx *gin.Context) {
@@ -103,6 +118,12 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 	userChangeNotifier.OnUserDeleted(pluginManager.RemoveUser)
 	userChangeNotifier.OnUserAdded(pluginManager.InitializeForUserID)
 
+	var authRateLimiter *auth.RateLimiter
+	if conf.Server.RateLimit.Enabled {
+		r := rate.Limit(float64(conf.Server.RateLimit.RequestsPerSecond))
+		authRateLimiter = auth.NewRateLimiter(r, conf.Server.RateLimit.Burst)
+	}
+
 	ui.Register(g, *vInfo, conf.Registration)
 
 	g.Match([]string{"GET", "HEAD"}, "/health", healthHandler.Health)
@@ -154,6 +175,9 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 
 	clientAuth := g.Group("")
 	{
+		if authRateLimiter != nil {
+			clientAuth.Use(authRateLimiter.RateLimit())
+		}
 		clientAuth.Use(authentication.RequireClient())
 		app := clientAuth.Group("/application")
 		{

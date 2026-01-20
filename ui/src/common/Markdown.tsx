@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown, {defaultUrlTransform} from 'react-markdown';
 import type {UrlTransform} from 'react-markdown';
 import gfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 // Copy from mlflow/server/js/src/shared/web-shared/genai-markdown-renderer/GenAIMarkdownRenderer.tsx
 // Related PR: https://github.com/mlflow/mlflow/pull/16761
@@ -26,6 +27,7 @@ export const Markdown = ({
     <ReactMarkdown
         components={{img: ({...props}) => <img onLoad={onImageLoaded} {...props} />}}
         remarkPlugins={[gfm]}
+        rehypePlugins={[rehypeSanitize]}
         urlTransform={urlTransform}>
         {children}
     </ReactMarkdown>

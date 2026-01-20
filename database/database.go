@@ -88,7 +88,12 @@ func New(dialect, connection, defaultUser, defaultPass string, strength int, cre
 	userCount := int64(0)
 	db.Find(new(model.User)).Count(&userCount)
 	if createDefaultUserIfNotExist && userCount == 0 {
-		db.Create(&model.User{Name: defaultUser, Pass: password.CreatePassword(defaultPass, strength), Admin: true})
+		db.Create(&model.User{
+			Name:               defaultUser,
+			Pass:               password.CreatePassword(defaultPass, strength),
+			Admin:              true,
+			MustChangePassword: true,
+		})
 	}
 
 	return &GormDatabase{DB: db}, nil

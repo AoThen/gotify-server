@@ -136,4 +136,11 @@ build-windows-386:
 
 build: build-linux-arm-7 build-linux-amd64 build-linux-386 build-linux-arm64 build-linux-riscv64 build-windows-amd64 build-windows-386
 
-.PHONY: test-coverage test check-go check-js verify-swagger check download-tools update-swagger package-zip build-docker build-js build
+.PHONY: test-coverage test check-go check-js verify-swagger check download-tools update-swagger package-zip build-docker build-js build build-docker-amd64
+
+build-docker-amd64: VERSION ?= latest
+build-docker-amd64:
+	docker build \
+		--build-arg GO_VERSION=$(GO_VERSION) \
+		-t gotify/server:$(VERSION) \
+		-f docker/Dockerfile .
