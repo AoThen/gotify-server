@@ -61,7 +61,7 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
 # ============================================================
 # Stage 3: Runtime Image (Minimal Alpine)
 # ============================================================
-FROM --platform=amd64 docker.io/library/alpine:${ALPINE_VERSION}
+FROM alpine:${ALPINE_VERSION}
 
 WORKDIR /gotify
 
@@ -72,7 +72,7 @@ RUN apk add --no-cache \
     curl \
     tzdata \
     sqlite \
-    mariadb-client-libs \
+    mariadb-client \
     libpq
 
 # Create non-root user
