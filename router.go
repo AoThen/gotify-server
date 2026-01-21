@@ -24,7 +24,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Create creates the gin engine with all routes.
 func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Configuration) (*gin.Engine, func()) {
 	g := gin.New()
 
@@ -34,7 +33,6 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 	g.ForwardedByClientIP = true
 
 	g.Use(func(ctx *gin.Context) {
-		// Map sockets "@" to 127.0.0.1, because gin-gonic can only trust IPs.
 		if ctx.Request.RemoteAddr == "@" {
 			ctx.Request.RemoteAddr = "127.0.0.1:65535"
 		}
@@ -212,16 +210,6 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 	g.OPTIONS("/*any")
 
 	// swagger:operation GET /version version getVersion
-	//
-	// Get version information.
-	//
-	// ---
-	// produces: [application/json]
-	// responses:
-	//   200:
-	//     description: Ok
-	//     schema:
-	//         $ref: "#/definitions/VersionInfo"
 	g.GET("version", func(ctx *gin.Context) {
 		ctx.JSON(200, vInfo)
 	})
@@ -246,21 +234,15 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 		app := clientAuth.Group("/application")
 		{
 			app.GET("", applicationHandler.GetApplications)
-
 			app.POST("", applicationHandler.CreateApplication)
-
 			app.POST("/:id/image", applicationHandler.UploadApplicationImage)
-
 			app.DELETE("/:id/image", applicationHandler.RemoveApplicationImage)
-
 			app.PUT("/:id", applicationHandler.UpdateApplication)
-
 			app.DELETE("/:id", applicationHandler.DeleteApplication)
 
 			tokenMessage := app.Group("/:id/message")
 			{
 				tokenMessage.GET("", messageHandler.GetMessagesWithApplication)
-
 				tokenMessage.DELETE("", messageHandler.DeleteMessageWithApplication)
 			}
 		}
@@ -268,27 +250,20 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 		client := clientAuth.Group("/client")
 		{
 			client.GET("", clientHandler.GetClients)
-
 			client.POST("", clientHandler.CreateClient)
-
 			client.DELETE("/:id", clientHandler.DeleteClient)
-
 			client.PUT("/:id", clientHandler.UpdateClient)
 		}
 
 		message := clientAuth.Group("/message")
 		{
 			message.GET("", messageHandler.GetMessages)
-
 			message.DELETE("", messageHandler.DeleteMessages)
-
 			message.DELETE("/:id", messageHandler.DeleteMessage)
 		}
 
 		clientAuth.GET("/stream", streamHandler.Handle)
-
 		clientAuth.GET("current/user", userHandler.GetCurrentUser)
-
 		clientAuth.POST("current/user/password", userHandler.ChangePassword)
 	}
 
@@ -301,13 +276,32 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 		authAdmin.Use(authentication.RequireAdmin())
 
 		authAdmin.GET("", userHandler.GetUsers)
-
 		authAdmin.DELETE("/:id", userHandler.DeleteUserByID)
-
 		authAdmin.GET("/:id", userHandler.GetUserByID)
-
 		authAdmin.POST("/:id", userHandler.UpdateUserByID)
 	}
+
+	// Blacklist management API (Phase 2)
+	if authBlacklist != nil {
+		blacklistAPI := &api.BlacklistAPI{Blacklist: authBlacklist}
+		blacklistGroup := g.Group("/admin/blacklist")
+		{
+			blacklistGroup.Use(authentication.RequireAdmin())
+			blacklistGroup.GET("", blacklistAPI.GetBlacklist)
+			blacklistGroup.GET("/:ip", blacklistAPI.GetIPStatus)
+			blacklistGroup.DELETE("/:ip", blacklistAPI.UnblockIP)
+			blacklistGroup.POST("/clear-all", blacklistAPI.ClearBlacklist)
+		}
+
+		whitelistGroup := g.Group("/admin/whitelist")
+		{
+			whitelistGroup.Use(authentication.RequireAdmin())
+			whitelistGroup.GET("", blacklistAPI.GetWhitelist)
+			whitelistGroup.POST("", blacklistAPI.AddToWhitelist)
+			whitelistGroup.DELETE("/:ip", blacklistAPI.RemoveFromWhitelist)
+		}
+	}
+
 	return g, streamHandler.Close
 }
 

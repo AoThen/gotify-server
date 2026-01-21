@@ -8,7 +8,6 @@ import (
 	"github.com/jinzhu/configor"
 )
 
-// Configuration is stuff that can be configured externally per env variables or config file (config.yml).
 type Configuration struct {
 	Server struct {
 		KeepAlivePeriodSeconds int
@@ -40,13 +39,38 @@ type Configuration struct {
 			AllowMethods []string
 			AllowHeaders []string
 		}
-		RateLimit struct {
-			Enabled           bool `default:"true"`
-			RequestsPerSecond int  `default:"5"`
-			Burst             int  `default:"10"`
-		}
 
 		TrustedProxies []string
+		RateLimit struct {
+			Global struct {
+				Enabled           bool `default:"true"`
+				RequestsPerSecond int  `default:"20"`
+				Burst             int  `default:"50"`
+			}
+			Auth struct {
+				Enabled           bool `default:"true"`
+				RequestsPerSecond int  `default:"10"`
+				Burst             int  `default:"20"`
+			}
+			Message struct {
+				Enabled           bool `default:"true"`
+				RequestsPerSecond int  `default:"15"`
+				Burst             int  `default:"30"`
+			}
+			Admin struct {
+				Enabled           bool `default:"true"`
+				RequestsPerSecond int  `default:"5"`
+				Burst             int  `default:"10"`
+			}
+		}
+		AuthBlacklist struct {
+			Enabled         bool     `default:"true"`
+			MaxFailures     int      `default:"5"`
+			WindowSeconds   int      `default:"300"`
+			BlockDuration   int      `default:"3600"`
+			Whitelist       []string
+			CleanupInterval int      `default:"300"`
+		}
 	}
 	Database struct {
 		Dialect    string `default:"sqlite3"`
@@ -69,7 +93,6 @@ func configFiles() []string {
 	return []string{"config.yml", "/etc/gotify/config.yml"}
 }
 
-// Get returns the configuration extracted from env variables or config file.
 func Get() *Configuration {
 	conf := new(Configuration)
 	err := configor.New(&configor.Config{ENVPrefix: "GOTIFY", Silent: true}).Load(conf, configFiles()...)

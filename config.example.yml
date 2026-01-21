@@ -2,65 +2,82 @@
 # Save it to `config.yml` when edited
 
 server:
-  keepaliveperiodseconds: 0 # 0 = use Go default (15s); -1 = disable keepalive; set to interval in which keepalive packets will be sent. Only change this value if you know what you are doing.
-  listenaddr: "" # address to bind on, leave empty to bind on all addresses. Prefix with "unix:" to create a unix socket. Example: "unix:/tmp/gotify.sock".
-  port: 80 # port to HTTP server will listen on
+  keepaliveperiodseconds: 0
+  listenaddr: ""
+  port: 80
 
   ssl:
-    enabled: false # if https should be enabled
-    redirecttohttps: true # redirect to https if site is accessed by http
-    listenaddr: "" # address to bind on, leave empty to bind on all addresses. Prefix with "unix:" to create a unix socket. Example: "unix:/tmp/gotify.sock".
-    port: 443 # https port
-    certfile: # cert file (leave empty when using letsencrypt)
-    certkey: # cert key (leave empty when using letsencrypt)
+    enabled: false
+    redirecttohttps: true
+    listenaddr: ""
+    port: 443
+    certfile:
+    certkey:
     letsencrypt:
-      enabled: false # if certificate should be requested from letsencrypt
-      accepttos: false # if you accept tos from letsencrypt
-      cache: data/certs # directory of cache from letsencrypt
-      directoryurl: # override the directory url of ACME server
-                    # Let's Encrypt highly recommend testing against their staging environment before using their production environment.
-                    # Staging server has high rate limits for testing and debugging, issued certificates are not valid
-                    # example: https://acme-staging-v02.api.letsencrypt.org/directory
-      hosts: # hosts for which letsencrypt should request certificates
-#      - mydomain.tld
-#      - myotherdomain.tld
+      enabled: false
+      accepttos: false
+      cache: data/certs
+      directoryurl:
+      hosts:
 
-  responseheaders: # response headers are added to every response (default: none)
-#    X-Custom-Header: "custom value"
-#
-  trustedproxies: # IPs or IP ranges of trusted proxies. Used to obtain remote ip via the X-Forwarded-For header. (configure 127.0.0.1 to trust sockets)
-#   - 127.0.0.1/32
-#   - ::1
+  responseheaders:
 
-  cors: # Sets cors headers only when needed and provides support for multiple allowed origins. Overrides Access-Control-* Headers in response headers.
+  trustedproxies:
+
+  cors:
     alloworigins:
-#      - ".+.example.com"
-#      - "otherdomain.com"
     allowmethods:
-#      - "GET"
-#      - "POST"
     allowheaders:
-#      - "Authorization"
-#      - "content-type"
+
   stream:
-    pingperiodseconds: 45 # interval in which websocket pings will be sent. Only change this value if you know what you are doing.
-    allowedorigins: # allowed origins for websocket connections (same origin is always allowed)
-#      - ".+.example.com"
-#      - "otherdomain.com"
+    pingperiodseconds: 45
+    allowedorigins:
 
+  # Tiered rate limiting (Option A)
   ratelimit:
-    enabled: true # enable rate limiting to protect against brute force attacks
-    requestspersecond: 5 # maximum requests per second (default:5)
-    burst: 10 # allow short bursts of requests (default: 10)
+    # Level 1: Global rate limiting (all requests)
+    global:
+      enabled: true
+      requestspersecond: 20
+      burst: 50
 
-database: # for database see (configure database section)
+    # Level 2: Authenticated API (Client Token, Admin)
+    auth:
+      enabled: true
+      requestspersecond: 10
+      burst: 20
+
+    # Level 3: Message sending (Application Token)
+    message:
+      enabled: true
+      requestspersecond: 15
+      burst: 30
+
+    # Level 4: Admin API
+    admin:
+      enabled: true
+      requestspersecond: 5
+      burst: 10
+
+  # Blacklist configuration (Phase 2)
+  authblacklist:
+    enabled: true
+    maxfailures: 5
+    windowseconds: 300
+    blockduration: 3600
+    cleanupinterval: 300
+    whitelist:
+      - "127.0.0.1"
+      - "192.168.1.0/24"
+
+database:
   dialect: sqlite3
   connection: data/gotify.db
 
-defaultuser: # on database creation, gotify creates an admin user
-  name: admin # username of default user
-  pass: admin # password of default user
-passstrength: 10 # bcrypt password strength (higher = better but also slower)
-uploadedimagesdir: data/images # directory for storing uploaded images
-pluginsdir: data/plugins # directory where plugin resides
-registration: false # enable registrations
+defaultuser:
+  name: admin
+  pass: admin
+passstrength: 10
+uploadedimagesdir: data/images
+pluginsdir: data/plugins
+registration: false
