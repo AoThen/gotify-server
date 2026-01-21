@@ -10,7 +10,7 @@ ARG ALPINE_VERSION=3.20
 # ============================================================
 # Stage 1: Build JavaScript/TypeScript UI
 # ============================================================
-FROM --platform=amd64 node:24-alpine AS js-builder
+FROM node:24-alpine AS js-builder
 
 WORKDIR /src/gotify/ui
 
@@ -25,7 +25,7 @@ RUN npm install && \
 # ============================================================
 # Stage 2: Build Go Application
 # ============================================================
-FROM --platform=amd64 docker.io/library/golang:${GO_VERSION}-alpine AS builder
+FROM docker.io/library/golang:${GO_VERSION}-alpine AS builder
 
 WORKDIR /src/gotify
 
