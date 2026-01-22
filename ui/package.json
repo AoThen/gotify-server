@@ -36,7 +36,7 @@
   },
   "scripts": {
     "start": "vite",
-    "prebuild": "tsc",
+    "prebuild": "npx tsc -p tsconfig.prod.json --noEmit",
     "build": "vite build",
     "test": "vitest --disable-console-intercept --no-file-parallelism",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",

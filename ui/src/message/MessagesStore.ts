@@ -22,10 +22,9 @@ interface PendingDelete {
 }
 
 export class MessagesStore {
-    private state: Record<string, MessagesState> = {};
+    @observable private state: Record<string, MessagesState> = {};
     private pendingDeletes: Map<number, PendingDelete> = observable.map();
-
-    private loading = false;
+    @observable private loading = false;
 
     public constructor(
         private readonly appStore: BaseStore<IApplication>,
@@ -34,6 +33,7 @@ export class MessagesStore {
         makeObservable<MessagesStore, 'state' | 'pendingDeletes'>(this, {
             state: observable,
             pendingDeletes: observable,
+            loading: observable,
             addPendingDelete: action,
             executePendingDeletes: action,
             cancelPendingDelete: action,

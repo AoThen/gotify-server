@@ -2,31 +2,26 @@ import axios, {AxiosError, AxiosResponse} from 'axios';
 import * as config from './config';
 import {detect} from 'detect-browser';
 import {SnackReporter} from './snack/SnackManager';
-import {observable, makeObservable} from 'mobx';
+import {observable, makeObservable, action} from 'mobx';
 import {IClient, IUser} from './types';
 
 const tokenKey = 'gotify-login-key';
 
 export class CurrentUser {
-    private tokenCache: string | null = null;
-    private reconnectTimeoutId: number | null = null;
-    private reconnectTime = 7500;
-    public loggedIn = false;
-    public refreshKey = 0;
-    public authenticating = true;
-    public user: IUser = {name: 'unknown', admin: false, id: -1};
-    public connectionErrorMessage: string | null = null;
+    @observable tokenCache: string | null = null;
+    @observable reconnectTimeoutId: number | null = null;
+    @observable reconnectTime = 7500;
+    @observable loggedIn = false;
+    @observable refreshKey = 0;
+    @observable authenticating = true;
+    @observable user: IUser = {name: 'unknown', admin: false, id: -1};
+    @observable connectionErrorMessage: string | null = null;
 
     public constructor(private readonly snack: SnackReporter) {
-        makeObservable(this, {
-            loggedIn: observable,
-            authenticating: observable,
-            user: observable,
-            connectionErrorMessage: observable,
-            refreshKey: observable,
-        });
+        makeObservable(this);
     }
 
+    @action
     public token = (): string => {
         if (this.tokenCache !== null) {
             return this.tokenCache;
@@ -41,6 +36,7 @@ export class CurrentUser {
         return '';
     };
 
+    @action
     private readonly setToken = (token: string) => {
         this.tokenCache = token;
         window.localStorage.setItem(tokenKey, token);
@@ -68,6 +64,7 @@ export class CurrentUser {
                 return false;
             });
 
+    @action
     public login = async (username: string, password: string) => {
         this.loggedIn = false;
         this.authenticating = true;
@@ -96,6 +93,7 @@ export class CurrentUser {
             });
     };
 
+    @action
     public tryAuthenticate = async (): Promise<AxiosResponse<IUser>> => {
         if (this.token() === '') {
             this.authenticating = false;
@@ -136,6 +134,7 @@ export class CurrentUser {
             });
     };
 
+    @action
     public logout = async () => {
         await axios
             .get(config.get('url') + 'client')
@@ -164,6 +163,7 @@ export class CurrentUser {
         });
     };
 
+    @action
     private readonly connectionError = (message: string) => {
         this.connectionErrorMessage = message;
         if (this.reconnectTimeoutId !== null) {
