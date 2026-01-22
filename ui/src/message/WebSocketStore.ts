@@ -6,7 +6,7 @@ import {IMessage} from '../types';
 import {makeObservable, observable, action} from 'mobx';
 
 export class WebSocketStore {
-    @observable private wsActive = false;
+    private wsActive = false;
     private ws: WebSocket | null = null;
     private currentCallback: ((msg: IMessage) => void) | null = null;
     private reconnectTimeout: number | null = null;
@@ -15,9 +15,7 @@ export class WebSocketStore {
         private readonly snack: SnackReporter,
         private readonly currentUser: CurrentUser
     ) {
-        makeObservable<WebSocketStore>(this, {
-            wsActive: observable,
-        });
+        makeObservable(this, {});
     }
 
     @action
