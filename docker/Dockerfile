@@ -18,6 +18,9 @@ WORKDIR /src/gotify/ui
 COPY ./ui/package*.json ./
 COPY ./ui/tsconfig*.json ./
 COPY ./ui/src ./src
+COPY ./ui/index.html ./
+COPY ./ui/vite.config.ts ./
+COPY ./ui/public ./public
 
 # Install dependencies and build
 RUN npm install && \
