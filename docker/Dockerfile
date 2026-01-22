@@ -16,6 +16,7 @@ WORKDIR /src/gotify/ui
 
 # Copy UI source
 COPY ./ui/package*.json ./
+COPY ./ui/tsconfig*.json ./
 COPY ./ui/src ./src
 
 # Install dependencies and build
