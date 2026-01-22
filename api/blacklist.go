@@ -13,6 +13,24 @@ type BlacklistAPI struct {
 	Blacklist *auth.AuthBlacklist
 }
 
+func (b *BlacklistAPI) validateIP(ctx *gin.Context, ip string) bool {
+	if ip == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "IP parameter is required",
+		})
+		return false
+	}
+
+	if !auth.IsValidIP(ip) {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid IP parameter format",
+		})
+		return false
+	}
+
+	return true
+}
+
 // GetBlacklist returns the current blacklist
 func (b *BlacklistAPI) GetBlacklist(ctx *gin.Context) {
 	if !b.Blacklist.GetConfig().Enabled {
@@ -49,10 +67,7 @@ func (b *BlacklistAPI) GetIPStatus(ctx *gin.Context) {
 	}
 
 	ip := ctx.Param("ip")
-	if ip == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "IP parameter is required",
-		})
+	if !b.validateIP(ctx, ip) {
 		return
 	}
 
@@ -85,10 +100,7 @@ func (b *BlacklistAPI) UnblockIP(ctx *gin.Context) {
 	}
 
 	ip := ctx.Param("ip")
-	if ip == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "IP parameter is required",
-		})
+	if !b.validateIP(ctx, ip) {
 		return
 	}
 
@@ -160,10 +172,7 @@ func (b *BlacklistAPI) AddToWhitelist(ctx *gin.Context) {
 // RemoveFromWhitelist removes an IP or CIDR from the whitelist
 func (b *BlacklistAPI) RemoveFromWhitelist(ctx *gin.Context) {
 	ip := ctx.Param("ip")
-	if ip == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "IP parameter is required",
-		})
+	if !b.validateIP(ctx, ip) {
 		return
 	}
 

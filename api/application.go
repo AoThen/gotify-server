@@ -189,7 +189,7 @@ func (a *ApplicationAPI) DeleteApplication(ctx *gin.Context) {
 				return
 			}
 			if app.Image != "" {
-				os.Remove(a.ImageDir + app.Image)
+				os.Remove(filepath.Join(a.ImageDir, app.Image))
 			}
 		} else {
 			ctx.AbortWithError(404, fmt.Errorf("app with id %d doesn't exists", id))
@@ -349,14 +349,14 @@ func (a *ApplicationAPI) UploadApplicationImage(ctx *gin.Context) {
 				return
 			}
 
-			err = ctx.SaveUploadedFile(file, a.ImageDir+name)
+			err = ctx.SaveUploadedFile(file, filepath.Join(a.ImageDir, name))
 			if err != nil {
 				ctx.AbortWithError(500, err)
 				return
 			}
 
 			if app.Image != "" {
-				os.Remove(a.ImageDir + app.Image)
+				os.Remove(filepath.Join(a.ImageDir, app.Image))
 			}
 
 			app.Image = name
@@ -426,7 +426,7 @@ func (a *ApplicationAPI) RemoveApplicationImage(ctx *gin.Context) {
 			if success := successOrAbort(ctx, 500, a.DB.UpdateApplication(app)); !success {
 				return
 			}
-			os.Remove(a.ImageDir + image)
+			os.Remove(filepath.Join(a.ImageDir, image))
 			ctx.JSON(200, withResolvedImage(app))
 		} else {
 			ctx.AbortWithError(404, fmt.Errorf("app with id %d doesn't exists", id))

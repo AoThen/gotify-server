@@ -54,4 +54,9 @@ type Application struct {
 	// read only: true
 	// example: 2019-01-01T00:00:00Z
 	LastUsed *time.Time `json:"lastUsed"`
+	// The token expiration time. nil means never expires.
+	//
+	// read only: true
+	// example: 2019-01-01T00:00:00Z
+	ExpiresAt *time.Time `json:"expiresAt"`
 }

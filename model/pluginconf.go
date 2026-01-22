@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // PluginConf holds information about the plugin.
 type PluginConf struct {
 	ID            uint   `gorm:"primaryKey;autoIncrement"`
@@ -10,6 +12,7 @@ type PluginConf struct {
 	Enabled       bool
 	Config        []byte
 	Storage       []byte
+	ExpiresAt     *time.Time `json:"expiresAt"`
 }
 
 // PluginConfExternal Model

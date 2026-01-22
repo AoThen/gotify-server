@@ -62,6 +62,10 @@ func (a *Auth) RequireClient() gin.HandlerFunc {
 		if client, err := a.DB.GetClientByToken(tokenID); err != nil {
 			return false, false, 0, err
 		} else if client != nil {
+			if client.ExpiresAt != nil && client.ExpiresAt.Before(time.Now()) {
+				return false, false, 0, errors.New("token has expired")
+			}
+
 			now := time.Now()
 			if client.LastUsed == nil || client.LastUsed.Add(5*time.Minute).Before(now) {
 				if err := a.DB.UpdateClientTokensLastUsed([]string{tokenID}, &now); err != nil {
@@ -83,6 +87,10 @@ func (a *Auth) RequireApplicationToken() gin.HandlerFunc {
 		if app, err := a.DB.GetApplicationByToken(tokenID); err != nil {
 			return false, false, 0, err
 		} else if app != nil {
+			if app.ExpiresAt != nil && app.ExpiresAt.Before(time.Now()) {
+				return false, false, 0, errors.New("token has expired")
+			}
+
 			now := time.Now()
 			if app.LastUsed == nil || app.LastUsed.Add(5*time.Minute).Before(now) {
 				if err := a.DB.UpdateApplicationTokenLastUsed(tokenID, &now); err != nil {
