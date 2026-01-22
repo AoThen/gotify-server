@@ -3,7 +3,7 @@ import {CurrentUser} from '../CurrentUser';
 import * as config from '../config';
 import {AxiosError} from 'axios';
 import {IMessage} from '../types';
-import {makeObservable, observable, action} from 'mobx';
+import {makeObservable, action} from 'mobx';
 
 export class WebSocketStore {
     private wsActive = false;
