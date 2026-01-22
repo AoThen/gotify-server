@@ -54,7 +54,7 @@ COPY --from=js-builder /src/gotify/ui/build ./ui/build
 # CGO_ENABLED=1: Alpine uses musl libc, needs CGO for SQLite/MySQL/Postgres
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" \
-    -o /gotify-server \
+    -o /gotify/gotify \
     -tags 'sqlite3 mysql postgres' \
     .
 
@@ -62,6 +62,9 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
 # Stage 3: Runtime Image (Minimal Alpine)
 # ============================================================
 FROM alpine:${ALPINE_VERSION}
+
+# Copy the built application from builder stage
+COPY --from=builder /gotify/gotify /gotify/gotify
 
 WORKDIR /gotify
 
