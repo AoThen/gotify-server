@@ -15,7 +15,7 @@ export class WebSocketStore {
         private readonly snack: SnackReporter,
         private readonly currentUser: CurrentUser
     ) {
-        makeObservable(this, {
+        makeObservable<WebSocketStore>(this, {
             wsActive: observable,
         });
     }

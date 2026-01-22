@@ -30,7 +30,7 @@ export class MessagesStore {
         private readonly appStore: BaseStore<IApplication>,
         private readonly snack: SnackReporter
     ) {
-        makeObservable<MessagesStore, 'state' | 'pendingDeletes'>(this, {
+        makeObservable<MessagesStore, 'state' | 'pendingDeletes' | 'loading'>(this, {
             state: observable,
             pendingDeletes: observable,
             loading: observable,
