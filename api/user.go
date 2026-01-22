@@ -168,6 +168,11 @@ func (a *UserAPI) GetCurrentUser(ctx *gin.Context) {
 func (a *UserAPI) CreateUser(ctx *gin.Context) {
 	user := model.CreateUserExternal{}
 	if err := ctx.Bind(&user); err == nil {
+		if err := validatePassword(user.Pass); err != nil {
+			ctx.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+
 		internal := &model.User{
 			Name:               user.Name,
 			Admin:              user.Admin,
@@ -364,6 +369,11 @@ func (a *UserAPI) DeleteUserByID(ctx *gin.Context) {
 func (a *UserAPI) ChangePassword(ctx *gin.Context) {
 	pw := model.UserExternalPass{}
 	if err := ctx.Bind(&pw); err == nil {
+		if err := validatePassword(pw.Pass); err != nil {
+			ctx.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+
 		user, err := a.DB.GetUserByID(auth.GetUserID(ctx))
 		if success := successOrAbort(ctx, 500, err); !success {
 			return
@@ -442,6 +452,10 @@ func (a *UserAPI) UpdateUserByID(ctx *gin.Context) {
 					MustChangePassword: oldUser.MustChangePassword,
 				}
 				if user.Pass != "" {
+					if err := validatePassword(user.Pass); err != nil {
+						ctx.AbortWithError(http.StatusBadRequest, err)
+						return
+					}
 					internal.Pass = password.CreatePassword(user.Pass, a.PasswordStrength)
 				}
 				if success := successOrAbort(ctx, 500, a.DB.UpdateUser(internal)); !success {
@@ -462,4 +476,34 @@ func toExternalUser(internal *model.User) *model.UserExternal {
 		ID:                 internal.ID,
 		MustChangePassword: internal.MustChangePassword,
 	}
+}
+
+const (
+	minPasswordLength = 8
+)
+
+func validatePassword(pass string) error {
+	if len(pass) < minPasswordLength {
+		return fmt.Errorf("password must be at least %d characters long", minPasswordLength)
+	}
+
+	hasUpper := false
+	hasLower := false
+	hasDigit := false
+	for _, char := range pass {
+		switch {
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= '0' && char <= '9':
+			hasDigit = true
+		}
+	}
+
+	if !hasUpper || !hasLower || !hasDigit {
+		return errors.New("password must contain at least one uppercase letter, one lowercase letter, and one digit")
+	}
+
+	return nil
 }

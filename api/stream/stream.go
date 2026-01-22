@@ -17,11 +17,12 @@ import (
 
 // The API provides a handler for a WebSocket stream API.
 type API struct {
-	clients     map[uint][]*client
-	lock        sync.RWMutex
-	pingPeriod  time.Duration
-	pongTimeout time.Duration
-	upgrader    *websocket.Upgrader
+	clients        map[uint][]*client
+	lock           sync.RWMutex
+	pingPeriod     time.Duration
+	pongTimeout    time.Duration
+	upgrader       *websocket.Upgrader
+	tokenUpdaterCh chan struct{}
 }
 
 // New creates a new instance of API.
@@ -30,10 +31,11 @@ type API struct {
 // pong command.
 func New(pingPeriod, pongTimeout time.Duration, allowedWebSocketOrigins []string) *API {
 	return &API{
-		clients:     make(map[uint][]*client),
-		pingPeriod:  pingPeriod,
-		pongTimeout: pingPeriod + pongTimeout,
-		upgrader:    newUpgrader(allowedWebSocketOrigins),
+		clients:        make(map[uint][]*client),
+		pingPeriod:     pingPeriod,
+		pongTimeout:    pingPeriod + pongTimeout,
+		upgrader:       newUpgrader(allowedWebSocketOrigins),
+		tokenUpdaterCh: make(chan struct{}),
 	}
 }
 
@@ -155,6 +157,8 @@ func (a *API) Handle(ctx *gin.Context) {
 
 // Close closes all client connections and stops answering new connections.
 func (a *API) Close() {
+	close(a.tokenUpdaterCh)
+
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -166,6 +170,29 @@ func (a *API) Close() {
 	for k := range a.clients {
 		delete(a.clients, k)
 	}
+}
+
+// StartTokenUpdater starts the background task to update client token last used times.
+func (a *API) StartTokenUpdater(db interface {
+	UpdateClientTokensLastUsed(tokens []string, t *time.Time) error
+}, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				connectedTokens := a.CollectConnectedClientTokens()
+				if len(connectedTokens) > 0 {
+					now := time.Now()
+					db.UpdateClientTokensLastUsed(connectedTokens, &now)
+				}
+			case <-a.tokenUpdaterCh:
+				return
+			}
+		}
+	}()
 }
 
 func uniq[T comparable](s []T) []T {

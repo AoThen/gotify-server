@@ -335,7 +335,7 @@ func (a *ApplicationAPI) UploadApplicationImage(ctx *gin.Context) {
 			}
 
 			ext := filepath.Ext(file.Filename)
-			if !ValidApplicationImageExt(ext) {
+			if ext == "" || !ValidApplicationImageExt(ext) {
 				ctx.AbortWithError(400, errors.New("invalid file extension"))
 				return
 			}
@@ -343,6 +343,11 @@ func (a *ApplicationAPI) UploadApplicationImage(ctx *gin.Context) {
 			name := generateNonExistingImageName(a.ImageDir, func() string {
 				return generateImageName() + ext
 			})
+
+			if strings.Contains(name, "/") || strings.Contains(name, "\\") {
+				ctx.AbortWithError(400, errors.New("invalid filename"))
+				return
+			}
 
 			err = ctx.SaveUploadedFile(file, a.ImageDir+name)
 			if err != nil {
