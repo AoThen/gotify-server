@@ -168,6 +168,11 @@ const Buttons = ({
 }) => {
     const {classes} = useStyles();
 
+    const handleLogout = () => {
+        logout();
+        window.location.hash = '#/login';
+    };
+
     return (
         <div className={classes.menuButtons}>
             <ResponsiveButton
@@ -201,7 +206,7 @@ const Buttons = ({
             <ResponsiveButton
                 icon={<ExitToApp />}
                 label="Logout"
-                onClick={logout}
+                onClick={handleLogout}
                 id="logout"
                 color="inherit"
             />

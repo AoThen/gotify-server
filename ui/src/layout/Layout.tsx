@@ -43,17 +43,7 @@ const useStyles = makeStyles()((theme: Theme) => ({
 const localStorageThemeKey = 'gotify-theme';
 
 const Layout = observer(() => {
-    const {
-        currentUser: {
-            loggedIn,
-            authenticating,
-            user: {name, admin},
-            logout,
-            tryReconnect,
-            connectionErrorMessage,
-            refreshKey,
-        },
-    } = useStores();
+    const {currentUser} = useStores();
     const {classes} = useStyles();
     const [currentTheme, setCurrentTheme] = React.useState<ThemeKey>(() => {
         const stored = window.localStorage.getItem(localStorageThemeKey);
@@ -86,7 +76,10 @@ const Layout = observer(() => {
     };
 
     const authed = (children: React.ReactNode) => (
-        <RequireAuth loggedIn={loggedIn} authenticating={authenticating}>
+        <RequireAuth
+            loggedIn={currentUser.loggedIn}
+            authenticating={currentUser.authenticating}
+        >
             {children}
         </RequireAuth>
     );
@@ -97,76 +90,74 @@ const Layout = observer(() => {
                 <HashRouter>
                     {/* This forces all components to fully rerender including useEffects.
                         The refreshKey is updated when store data was cleaned and pages should refetch their data. */}
-                    <div key={refreshKey}>
-                        {!connectionErrorMessage ? null : (
-                            <ConnectionErrorBanner
-                                height={64}
-                                retry={() => tryReconnect()}
-                                message={connectionErrorMessage}
-                            />
-                        )}
-                        <div style={{display: 'flex', flexDirection: 'column'}}>
-                            <CssBaseline />
-                            <Header
-                                admin={admin}
-                                name={name}
-                                style={{top: !connectionErrorMessage ? 0 : 64}}
-                                version={version}
-                                loggedIn={loggedIn}
-                                themeMode={currentTheme}
-                                toggleTheme={toggleTheme}
-                                showSettings={() => setShowSettings(true)}
-                                logout={logout}
+                    {!currentUser.connectionErrorMessage ? null : (
+                        <ConnectionErrorBanner
+                            height={64}
+                            retry={() => currentUser.tryReconnect()}
+                            message={currentUser.connectionErrorMessage}
+                        />
+                    )}
+                    <div style={{display: 'flex', flexDirection: 'column'}}>
+                        <CssBaseline />
+                        <Header
+                            admin={currentUser.user.admin}
+                            name={currentUser.user.name}
+                            style={{top: !currentUser.connectionErrorMessage ? 0 : 64}}
+                            version={version}
+                            loggedIn={currentUser.loggedIn}
+                            themeMode={currentTheme}
+                            toggleTheme={toggleTheme}
+                            showSettings={() => setShowSettings(true)}
+                            logout={currentUser.logout}
+                            setNavOpen={setNavOpen}
+                        />
+                        <div style={{display: 'flex'}}>
+                            <Navigation
+                                loggedIn={currentUser.loggedIn}
+                                navOpen={navOpen}
                                 setNavOpen={setNavOpen}
                             />
-                            <div style={{display: 'flex'}}>
-                                <Navigation
-                                    loggedIn={loggedIn}
-                                    navOpen={navOpen}
-                                    setNavOpen={setNavOpen}
-                                />
-                                <main className={classes.content}>
-                                    <Routes>
-                                        <Route
-                                            path="/login"
-                                            element={
-                                                <LoginPage
-                                                    loggedIn={loggedIn}
-                                                    authenticating={authenticating}
-                                                />
-                                            }
-                                        />
-                                        <Route path="/" element={authed(<Messages />)} />
-                                        <Route
-                                            path="/messages/:id"
-                                            element={authed(<Messages />)}
-                                        />
-                                        <Route
-                                            path="/applications"
-                                            element={authed(<Applications />)}
-                                        />
-                                        <Route path="/clients" element={authed(<Clients />)} />
-                                        <Route path="/users" element={authed(<Users />)} />
-                                        <Route path="/plugins" element={authed(<Plugins />)} />
-                                        <Route
-                                            path="/plugins/:id"
-                                            element={authed(
-                                                <Lazy
-                                                    component={() =>
-                                                        import('../plugin/PluginDetailView')
-                                                    }
-                                                />
-                                            )}
-                                        />
-                                    </Routes>
-                                </main>
-                            </div>
-                            {showSettings && (
-                                <SettingsDialog fClose={() => setShowSettings(false)} />
-                            )}
-                            <ScrollUpButton />
-                            <SnackbarProvider />
+                            <main className={classes.content}>
+                                <Routes>
+                                    <Route
+                                        path="/login"
+                                        element={
+                                            <LoginPage
+                                                loggedIn={currentUser.loggedIn}
+                                                authenticating={currentUser.authenticating}
+                                            />
+                                        }
+                                    />
+                                    <Route path="/" element={authed(<Messages />)} />
+                                    <Route
+                                        path="/messages/:id"
+                                        element={authed(<Messages />)}
+                                    />
+                                    <Route
+                                        path="/applications"
+                                        element={authed(<Applications />)}
+                                    />
+                                    <Route path="/clients" element={authed(<Clients />)} />
+                                    <Route path="/users" element={authed(<Users />)} />
+                                    <Route path="/plugins" element={authed(<Plugins />)} />
+                                    <Route
+                                        path="/plugins/:id"
+                                        element={authed(
+                                            <Lazy
+                                                component={() =>
+                                                    import('../plugin/PluginDetailView')
+                                                }
+                                            />
+                                        )}
+                                    />
+                                </Routes>
+                            </main>
                         </div>
+                        {showSettings && (
+                            <SettingsDialog fClose={() => setShowSettings(false)} />
+                        )}
+                        <ScrollUpButton />
+                        <SnackbarProvider />
                     </div>
                 </HashRouter>
             </ThemeProvider>
@@ -190,11 +181,19 @@ const LoginPage: React.FC<{loggedIn: boolean; authenticating: boolean}> = ({
     authenticating,
 }) => {
     const navigate = useNavigate();
+    const [isRedirecting, setIsRedirecting] = React.useState(false);
+
     React.useEffect(() => {
-        if (loggedIn && !authenticating) {
+        if (loggedIn && !authenticating && !isRedirecting) {
+            setIsRedirecting(true);
             navigate('/applications', {replace: true});
         }
-    }, [loggedIn, authenticating, navigate]);
+    }, [loggedIn, authenticating, isRedirecting, navigate]);
+
+    if (authenticating || isRedirecting) {
+        return <LoadingSpinner />;
+    }
+
     return <Login />;
 };
 

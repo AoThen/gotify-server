@@ -13,11 +13,13 @@ export class CurrentUser {
     @observable reconnectTime = 7500;
     @observable loggedIn = false;
     @observable refreshKey = 0;
-    @observable authenticating = true;
+    @observable authKey = 0;
+    @observable authenticating = false;
     @observable user: IUser = {name: 'unknown', admin: false, id: -1};
     @observable connectionErrorMessage: string | null = null;
 
     public constructor(private readonly snack: SnackReporter) {
+        this.authenticating = false;
         makeObservable(this);
     }
 
@@ -104,7 +106,7 @@ export class CurrentUser {
             this.authenticating = false;
             this.loggedIn = false;
             this.refreshKey++;
-            return Promise.reject();
+            return Promise.reject(new Error('No token'));
         }
 
         return axios
@@ -120,9 +122,11 @@ export class CurrentUser {
                 return passThrough;
             })
             .catch((error: AxiosError) => {
+                this.authenticating = false;
+                this.refreshKey++;
+
                 if (!error || !error.response) {
                     this.connectionError('No network connection or server unavailable.');
-                    this.authenticating = false;
                     return Promise.reject(error);
                 }
 
@@ -130,7 +134,6 @@ export class CurrentUser {
                     this.connectionError(
                         `${error.response.statusText} (code: ${error.response.status}).`
                     );
-                    this.authenticating = false;
                     return Promise.reject(error);
                 }
 
@@ -141,15 +144,15 @@ export class CurrentUser {
                     this.loggedIn = false;
                     this.tokenCache = null;
                     this.refreshKey++;
-                    return Promise.reject(error);
                 }
-                this.authenticating = false;
                 return Promise.reject(error);
             });
     };
 
     @action
     public logout = async () => {
+        this.loggedIn = false;
+        this.refreshKey++;
         await axios
             .get(config.get('url') + 'client')
             .then((resp: AxiosResponse<IClient[]>) => {
@@ -160,8 +163,6 @@ export class CurrentUser {
             .catch(() => Promise.resolve());
         window.localStorage.removeItem(tokenKey);
         this.tokenCache = null;
-        this.loggedIn = false;
-        this.refreshKey++;
     };
 
     public changePassword = (pass: string) => {
