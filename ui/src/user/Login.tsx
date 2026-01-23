@@ -36,7 +36,11 @@ const Login = observer(() => {
     };
     const login = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        currentUser.login(username, password);
+        currentUser.login(username, password).then(() => {
+            if (currentUser.loggedIn) {
+                navigate('/');
+            }
+        });
     };
     return (
         <DefaultPage title="Login" rightControl={registerButton()} maxWidth={250}>

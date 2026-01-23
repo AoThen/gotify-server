@@ -71,7 +71,7 @@ export class CurrentUser {
         this.refreshKey++;
         const browser = detect();
         const name = (browser && browser.name + ' ' + browser.version) || 'unknown browser';
-        axios
+        return axios
             .create()
             .request({
                 url: config.get('url') + 'client',
@@ -102,6 +102,7 @@ export class CurrentUser {
         this.token();
         if (this.tokenCache === null || this.token() === '') {
             this.authenticating = false;
+            this.loggedIn = false;
             this.refreshKey++;
             return Promise.reject();
         }
@@ -119,10 +120,9 @@ export class CurrentUser {
                 return passThrough;
             })
             .catch((error: AxiosError) => {
-                this.authenticating = false;
-                this.refreshKey++;
                 if (!error || !error.response) {
                     this.connectionError('No network connection or server unavailable.');
+                    this.authenticating = false;
                     return Promise.reject(error);
                 }
 
@@ -130,6 +130,7 @@ export class CurrentUser {
                     this.connectionError(
                         `${error.response.statusText} (code: ${error.response.status}).`
                     );
+                    this.authenticating = false;
                     return Promise.reject(error);
                 }
 
@@ -140,7 +141,9 @@ export class CurrentUser {
                     this.loggedIn = false;
                     this.tokenCache = null;
                     this.refreshKey++;
+                    return Promise.reject(error);
                 }
+                this.authenticating = false;
                 return Promise.reject(error);
             });
     };
