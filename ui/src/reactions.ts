@@ -20,8 +20,9 @@ export const registerReactions = (stores: StoreMapping) => {
         stores.userStore.clear();
         try {
             stores.wsStore.close();
-        } catch (e) {
+        } catch (_e) {
             // ignore close errors
+            void _e;
         }
         wsListenerRegistered = false;
     };

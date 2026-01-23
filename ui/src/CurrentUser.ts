@@ -46,9 +46,9 @@ export class CurrentUser {
         axios
             .create()
             .post(config.get('url') + 'user', {name, pass})
-            .then(() => {
+            .then(async () => {
                 this.snack('User Created. Logging in...');
-                this.login(name, pass);
+                await this.login(name, pass);
                 return true;
             })
             .catch((error: AxiosError<{error?: string; errorDescription?: string}>) => {
@@ -81,15 +81,16 @@ export class CurrentUser {
             .then((resp: AxiosResponse<IClient>) => {
                 this.snack(`A client named '${name}' was created for your session.`);
                 this.setToken(resp.data.token);
-                this.tryAuthenticate().catch(() => {
-                    console.log(
-                        'create client succeeded, but authenticated with given token failed'
-                    );
-                });
+                return this.tryAuthenticate();
             })
-            .catch(() => {
+            .catch((error: Error) => {
                 this.authenticating = false;
-                return this.snack('Login failed');
+                this.loggedIn = false;
+                this.tokenCache = null;
+                window.localStorage.removeItem(tokenKey);
+                if (error) {
+                    this.snack('Login failed');
+                }
             });
     };
 
