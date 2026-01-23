@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -141,6 +142,7 @@ func (ab *AuthBlacklist) RecordFailure(ip string) {
 			FirstFail: now,
 			LastFail:  now,
 		}
+		log.Printf("[Blacklist] IP %s authentication failure recorded (attempt 1/%d)", ip, ab.config.MaxFailures)
 		return
 	}
 
@@ -149,12 +151,15 @@ func (ab *AuthBlacklist) RecordFailure(ip string) {
 		failure.Count = 1
 		failure.FirstFail = now
 		failure.LastFail = now
+		log.Printf("[Blacklist] IP %s authentication failure recorded (attempt 1/%d)", ip, ab.config.MaxFailures)
 	} else {
 		failure.Count++
 		failure.LastFail = now
+		log.Printf("[Blacklist] IP %s authentication failure recorded (attempt %d/%d)", ip, failure.Count, ab.config.MaxFailures)
 	}
 
 	if failure.Count >= ab.config.MaxFailures {
+		log.Printf("[Blacklist] IP %s exceeded max failures (%d), blocking until %s", ip, ab.config.MaxFailures, now.Add(time.Duration(ab.config.BlockDuration)*time.Second).Format(time.RFC3339))
 		ab.blockIP(ip, "Too many authentication failures")
 	}
 }
@@ -168,12 +173,14 @@ func (ab *AuthBlacklist) ClearFailures(ip string) {
 
 func (ab *AuthBlacklist) blockIP(ip string, reason string) {
 	now := time.Now()
+	expiresAt := now.Add(time.Duration(ab.config.BlockDuration) * time.Second)
 	ab.blocked[ip] = &BlockedIP{
 		IP:        ip,
 		BlockedAt: now,
-		ExpiresAt: now.Add(time.Duration(ab.config.BlockDuration) * time.Second),
+		ExpiresAt: expiresAt,
 		Reason:    reason,
 	}
+	log.Printf("[Blacklist] IP %s blocked until %s (reason: %s)", ip, expiresAt.Format(time.RFC3339), reason)
 	delete(ab.failures, ip)
 }
 
@@ -181,8 +188,12 @@ func (ab *AuthBlacklist) UnblockIP(ip string) bool {
 	ab.mu.Lock()
 	defer ab.mu.Unlock()
 
+	exists := ab.blocked[ip] != nil
 	delete(ab.blocked, ip)
 	delete(ab.failures, ip)
+	if exists {
+		log.Printf("[Blacklist] IP %s manually unblocked", ip)
+	}
 	return true
 }
 
@@ -193,6 +204,9 @@ func (ab *AuthBlacklist) ClearAll() int {
 	count := len(ab.blocked)
 	ab.blocked = make(map[string]*BlockedIP)
 	ab.failures = make(map[string]*AuthFailure)
+	if count > 0 {
+		log.Printf("[Blacklist] Blacklist cleared (%d entries removed)", count)
+	}
 	return count
 }
 
@@ -241,6 +255,7 @@ func (ab *AuthBlacklist) AddToWhitelist(entry string) error {
 	}
 
 	ab.whitelist = append(ab.whitelist, networks[0])
+	log.Printf("[Blacklist] Added %s to whitelist", entry)
 	return nil
 }
 
@@ -256,6 +271,7 @@ func (ab *AuthBlacklist) RemoveFromWhitelist(entry string) {
 		}
 	}
 	ab.whitelist = newWhitelist
+	log.Printf("[Blacklist] Removed %s from whitelist", entry)
 }
 
 func (ab *AuthBlacklist) Close() {

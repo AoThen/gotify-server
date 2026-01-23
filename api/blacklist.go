@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -105,6 +106,7 @@ func (b *BlacklistAPI) UnblockIP(ctx *gin.Context) {
 	}
 
 	if b.Blacklist.UnblockIP(ip) {
+		log.Printf("[Blacklist] Admin unblocked IP %s", ip)
 		ctx.JSON(http.StatusOK, model.SuccessResponse{
 			Success: true,
 			Message: "IP successfully unblocked",
@@ -126,6 +128,7 @@ func (b *BlacklistAPI) ClearBlacklist(ctx *gin.Context) {
 	}
 
 	count := b.Blacklist.ClearAll()
+	log.Printf("[Blacklist] Admin cleared blacklist (%d entries removed)", count)
 	ctx.JSON(http.StatusOK, model.SuccessResponse{
 		Success:      true,
 		Message:      "Blacklist cleared successfully",
@@ -163,6 +166,7 @@ func (b *BlacklistAPI) AddToWhitelist(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("[Blacklist] Admin added %s to whitelist", req.Entry)
 	ctx.JSON(http.StatusOK, model.SuccessResponse{
 		Success: true,
 		Message: "Entry added to whitelist",
@@ -177,6 +181,7 @@ func (b *BlacklistAPI) RemoveFromWhitelist(ctx *gin.Context) {
 	}
 
 	b.Blacklist.RemoveFromWhitelist(ip)
+	log.Printf("[Blacklist] Admin removed %s from whitelist", ip)
 
 	ctx.JSON(http.StatusOK, model.SuccessResponse{
 		Success: true,

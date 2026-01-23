@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"strings"
 	"time"
 
@@ -197,9 +198,10 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 		token := a.tokenFromQueryOrHeader(ctx)
 		user, authValid := a.userFromBasicAuth(ctx)
 
-		if !authValid && token == "" && (user != nil || token != "") {
+		if !authValid && token == "" {
 			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
 				if !a.Blacklist.IsWhitelisted(clientIP) {
+					log.Printf("[Auth] IP %s authentication failed: no valid credentials provided", clientIP)
 					a.Blacklist.RecordFailure(clientIP)
 				}
 			}
@@ -210,6 +212,7 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 			if err != nil {
 				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
 					if !a.Blacklist.IsWhitelisted(clientIP) {
+						log.Printf("[Auth] IP %s authentication failed: invalid token or credentials", clientIP)
 						a.Blacklist.RecordFailure(clientIP)
 					}
 				}
@@ -225,6 +228,7 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 			} else if authenticated {
 				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
 					if !a.Blacklist.IsWhitelisted(clientIP) {
+						log.Printf("[Auth] IP %s authentication failed: insufficient permissions", clientIP)
 						a.Blacklist.RecordFailure(clientIP)
 					}
 				}
@@ -235,6 +239,7 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 
 		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
 			if !a.Blacklist.IsWhitelisted(clientIP) {
+				log.Printf("[Auth] IP %s authentication failed: no valid credentials provided", clientIP)
 				a.Blacklist.RecordFailure(clientIP)
 			}
 		}
@@ -284,6 +289,7 @@ func (a *Auth) Optional() gin.HandlerFunc {
 			}
 			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
 				if !a.Blacklist.IsWhitelisted(clientIP) {
+					log.Printf("[Auth] IP %s authentication failed: invalid token", clientIP)
 					a.Blacklist.RecordFailure(clientIP)
 				}
 			}
