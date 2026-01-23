@@ -86,7 +86,7 @@ RUN apk add --no-cache \
 # Create non-root user
 RUN addgroup -g 1000 gotify && \
     adduser -u 1000 -G gotify -s /bin/sh -D gotify && \
-    mkdir -p /gotify/data /gotify/images /gotify/plugins && \
+    mkdir -p /gotify/data /gotify/data/images /gotify/images /gotify/plugins && \
     chown -R gotify:gotify /gotify
 
 USER gotify
