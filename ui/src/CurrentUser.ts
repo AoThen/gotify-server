@@ -118,7 +118,6 @@ export class CurrentUser {
                 this.authenticating = false;
                 this.connectionErrorMessage = null;
                 this.reconnectTime = 7500;
-                this.refreshKey++;
                 return passThrough;
             })
             .catch((error: AxiosError) => {

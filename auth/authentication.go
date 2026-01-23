@@ -159,58 +159,56 @@ func (a *Auth) tokenFromAuthorizationHeader(ctx *gin.Context) string {
 	return authHeader[len(prefix):]
 }
 
-func (a *Auth) userFromBasicAuth(ctx *gin.Context) (*model.User, error) {
+func (a *Auth) userFromBasicAuth(ctx *gin.Context) (*model.User, bool) {
 	if name, pass, ok := ctx.Request.BasicAuth(); ok {
 		if user, err := a.DB.GetUserByName(name); err != nil {
-			return nil, err
-		} else if user != nil && password.ComparePassword(user.Pass, []byte(pass)) {
-			return user, nil
+			return nil, false
+		} else if user != nil {
+			if password.ComparePassword(user.Pass, []byte(pass)) {
+				return user, true
+			}
+			return nil, false
 		}
 	}
-	return nil, nil
+	return nil, false
 }
 
 func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// 检查黑名单
+		clientIP := getClientIP(ctx)
+
 		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-			clientIP := getClientIP(ctx)
-			if a.Blacklist.IsWhitelisted(clientIP) {
-				// IP 在白名单中，跳过黑名单检查
-			} else if a.Blacklist.IsBlocked(clientIP) {
-				blockedInfo := a.Blacklist.GetBlockedInfo(clientIP)
-				ctx.AbortWithStatusJSON(429, gin.H{
-					"error":            "Too Many Requests",
-					"errorDescription": "IP is temporarily blocked due to too many authentication failures",
-					"blockedUntil":     blockedInfo.ExpiresAt.Format(time.RFC3339),
-					"blockedIP":        clientIP,
-					"blockedAt":        blockedInfo.BlockedAt.Format(time.RFC3339),
-					"blockedReason":    blockedInfo.Reason,
-				})
-				return
+			if !a.Blacklist.IsWhitelisted(clientIP) {
+				if a.Blacklist.IsBlocked(clientIP) {
+					blockedInfo := a.Blacklist.GetBlockedInfo(clientIP)
+					ctx.AbortWithStatusJSON(429, gin.H{
+						"error":            "Too Many Requests",
+						"errorDescription": "IP is temporarily blocked due to too many authentication failures",
+						"blockedUntil":     blockedInfo.ExpiresAt.Format(time.RFC3339),
+						"blockedIP":        clientIP,
+						"blockedAt":        blockedInfo.BlockedAt.Format(time.RFC3339),
+						"blockedReason":    blockedInfo.Reason,
+					})
+					return
+				}
 			}
 		}
 
 		token := a.tokenFromQueryOrHeader(ctx)
-		user, err := a.userFromBasicAuth(ctx)
-		if err != nil {
-			// 记录认证错误到黑名单
+		user, authValid := a.userFromBasicAuth(ctx)
+
+		if !authValid && token == "" && (user != nil || token != "") {
 			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-				clientIP := getClientIP(ctx)
 				if !a.Blacklist.IsWhitelisted(clientIP) {
 					a.Blacklist.RecordFailure(clientIP)
 				}
 			}
-			ctx.AbortWithError(401, errors.New("invalid token or credentials"))
-			return
 		}
 
 		if user != nil || token != "" {
 			authenticated, ok, userID, err := auth(token, user)
 			if err != nil {
-				// 记录认证错误到黑名单
 				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-					clientIP := getClientIP(ctx)
 					if !a.Blacklist.IsWhitelisted(clientIP) {
 						a.Blacklist.RecordFailure(clientIP)
 					}
@@ -218,13 +216,12 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 				ctx.AbortWithError(401, errors.New("invalid token or credentials"))
 				return
 			} else if ok {
+				a.Blacklist.ClearFailures(clientIP)
 				RegisterAuthentication(ctx, user, userID, token)
 				ctx.Next()
 				return
 			} else if authenticated {
-				// 认证失败，记录到黑名单
 				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-					clientIP := getClientIP(ctx)
 					if !a.Blacklist.IsWhitelisted(clientIP) {
 						a.Blacklist.RecordFailure(clientIP)
 					}
@@ -234,9 +231,7 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 			}
 		}
 
-		// 没有提供有效的认证信息，记录到黑名单
 		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-			clientIP := getClientIP(ctx)
 			if !a.Blacklist.IsWhitelisted(clientIP) {
 				a.Blacklist.RecordFailure(clientIP)
 			}
@@ -247,23 +242,44 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 
 func (a *Auth) Optional() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		token := a.tokenFromQueryOrHeader(ctx)
-		user, err := a.userFromBasicAuth(ctx)
-		if err != nil {
-			RegisterAuthentication(ctx, nil, 0, "")
-			ctx.Next()
-			return
+		clientIP := getClientIP(ctx)
+
+		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+			if !a.Blacklist.IsWhitelisted(clientIP) {
+				if a.Blacklist.IsBlocked(clientIP) {
+					blockedInfo := a.Blacklist.GetBlockedInfo(clientIP)
+					ctx.AbortWithStatusJSON(429, gin.H{
+						"error":            "Too Many Requests",
+						"errorDescription": "IP is temporarily blocked due to too many authentication failures",
+						"blockedUntil":     blockedInfo.ExpiresAt.Format(time.RFC3339),
+						"blockedIP":        clientIP,
+						"blockedAt":        blockedInfo.BlockedAt.Format(time.RFC3339),
+						"blockedReason":    blockedInfo.Reason,
+					})
+					return
+				}
+			}
 		}
 
-		if user != nil {
+		token := a.tokenFromQueryOrHeader(ctx)
+		user, authValid := a.userFromBasicAuth(ctx)
+
+		if user != nil && authValid {
+			a.Blacklist.ClearFailures(clientIP)
 			RegisterAuthentication(ctx, user, user.ID, token)
 			ctx.Next()
 			return
 		} else if token != "" {
 			if tokenClient, err := a.DB.GetClientByToken(token); err == nil && tokenClient != nil {
+				a.Blacklist.ClearFailures(clientIP)
 				RegisterAuthentication(ctx, user, tokenClient.UserID, token)
 				ctx.Next()
 				return
+			}
+			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+				if !a.Blacklist.IsWhitelisted(clientIP) {
+					a.Blacklist.RecordFailure(clientIP)
+				}
 			}
 		}
 		RegisterAuthentication(ctx, nil, 0, "")

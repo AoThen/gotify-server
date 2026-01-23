@@ -170,7 +170,6 @@ const Buttons = ({
 
     const handleLogout = () => {
         logout();
-        window.location.hash = '#/login';
     };
 
     return (
