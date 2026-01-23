@@ -70,7 +70,7 @@ func (a *Auth) RequireAdmin() gin.HandlerFunc {
 			}
 			return true, user.Admin, token.UserID, nil
 		}
-		return false, false, 0, nil
+		return false, false, 0, errors.New("invalid or unknown token")
 	})
 }
 
@@ -96,7 +96,7 @@ func (a *Auth) RequireClient() gin.HandlerFunc {
 			}
 			return true, true, client.UserID, nil
 		}
-		return false, false, 0, nil
+		return false, false, 0, errors.New("invalid or unknown token")
 	})
 }
 
@@ -121,7 +121,7 @@ func (a *Auth) RequireApplicationToken() gin.HandlerFunc {
 			}
 			return true, true, app.UserID, nil
 		}
-		return false, false, 0, nil
+		return false, false, 0, errors.New("invalid or unknown token")
 	})
 }
 
@@ -194,14 +194,28 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 		token := a.tokenFromQueryOrHeader(ctx)
 		user, err := a.userFromBasicAuth(ctx)
 		if err != nil {
-			ctx.AbortWithError(500, errors.New("an error occurred while authenticating user"))
+			// 记录认证错误到黑名单
+			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+				clientIP := getClientIP(ctx)
+				if !a.Blacklist.IsWhitelisted(clientIP) {
+					a.Blacklist.RecordFailure(clientIP)
+				}
+			}
+			ctx.AbortWithError(401, errors.New("invalid token or credentials"))
 			return
 		}
 
 		if user != nil || token != "" {
 			authenticated, ok, userID, err := auth(token, user)
 			if err != nil {
-				ctx.AbortWithError(500, errors.New("an error occurred while authenticating user"))
+				// 记录认证错误到黑名单
+				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+					clientIP := getClientIP(ctx)
+					if !a.Blacklist.IsWhitelisted(clientIP) {
+						a.Blacklist.RecordFailure(clientIP)
+					}
+				}
+				ctx.AbortWithError(401, errors.New("invalid token or credentials"))
 				return
 			} else if ok {
 				RegisterAuthentication(ctx, user, userID, token)
