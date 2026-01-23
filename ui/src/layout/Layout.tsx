@@ -49,13 +49,13 @@ const Layout = observer(() => {
     const authenticating = currentUser.authenticating;
     const user = currentUser.user;
     const connectionErrorMessage = currentUser.connectionErrorMessage;
+    const refreshKey = currentUser.refreshKey;
 
     const {classes} = useStyles();
     const [currentTheme, setCurrentTheme] = React.useState<ThemeKey>(() => {
         const stored = window.localStorage.getItem(localStorageThemeKey);
         return isThemeKey(stored) ? stored : 'system';
     });
-    const [, setTick] = React.useState(0);
     const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
     const paletteMode = currentTheme === 'system' ? (prefersDark ? 'dark' : 'light') : currentTheme;
     const theme = React.useMemo(
@@ -70,10 +70,6 @@ const Layout = observer(() => {
     const {version} = config.get('version');
     const [navOpen, setNavOpen] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
-
-    React.useEffect(() => {
-        setTick(t => t + 1);
-    }, [loggedIn, authenticating]);
 
     const toggleTheme = () => {
         const nextMap: Record<ThemeKey, ThemeKey> = {
@@ -98,75 +94,77 @@ const Layout = observer(() => {
                 <HashRouter>
                     {/* This forces all components to fully rerender including useEffects.
                         The refreshKey is updated when store data was cleaned and pages should refetch their data. */}
-                    {!connectionErrorMessage ? null : (
-                        <ConnectionErrorBanner
-                            height={64}
-                            retry={() => currentUser.tryReconnect()}
-                            message={connectionErrorMessage}
-                        />
-                    )}
-                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                        <CssBaseline />
-                        <Header
-                            admin={user.admin}
-                            name={user.name}
-                            style={{top: !connectionErrorMessage ? 0 : 64}}
-                            version={version}
-                            loggedIn={loggedIn}
-                            themeMode={currentTheme}
-                            toggleTheme={toggleTheme}
-                            showSettings={() => setShowSettings(true)}
-                            logout={currentUser.logout}
-                            setNavOpen={setNavOpen}
-                        />
-                        <div style={{display: 'flex'}}>
-                            <Navigation
+                    <div key={refreshKey}>
+                        {!connectionErrorMessage ? null : (
+                            <ConnectionErrorBanner
+                                height={64}
+                                retry={() => currentUser.tryReconnect()}
+                                message={connectionErrorMessage}
+                            />
+                        )}
+                        <div style={{display: 'flex', flexDirection: 'column'}}>
+                            <CssBaseline />
+                            <Header
+                                admin={user.admin}
+                                name={user.name}
+                                style={{top: !connectionErrorMessage ? 0 : 64}}
+                                version={version}
                                 loggedIn={loggedIn}
-                                navOpen={navOpen}
+                                themeMode={currentTheme}
+                                toggleTheme={toggleTheme}
+                                showSettings={() => setShowSettings(true)}
+                                logout={currentUser.logout}
                                 setNavOpen={setNavOpen}
                             />
-                            <main className={classes.content}>
-                                <Routes>
-                                    <Route
-                                        path="/login"
-                                        element={
-                                            <LoginPage
-                                                loggedIn={loggedIn}
-                                                authenticating={authenticating}
-                                            />
-                                        }
-                                    />
-                                    <Route path="/" element={authed(<Messages />)} />
-                                    <Route
-                                        path="/messages/:id"
-                                        element={authed(<Messages />)}
-                                    />
-                                    <Route
-                                        path="/applications"
-                                        element={authed(<Applications />)}
-                                    />
-                                    <Route path="/clients" element={authed(<Clients />)} />
-                                    <Route path="/users" element={authed(<Users />)} />
-                                    <Route path="/blacklist" element={authed(<Blacklist />)} />
-                                    <Route path="/plugins" element={authed(<Plugins />)} />
-                                    <Route
-                                        path="/plugins/:id"
-                                        element={authed(
-                                            <Lazy
-                                                component={() =>
-                                                    import('../plugin/PluginDetailView')
-                                                }
-                                            />
-                                        )}
-                                    />
-                                </Routes>
-                            </main>
+                            <div style={{display: 'flex'}}>
+                                <Navigation
+                                    loggedIn={loggedIn}
+                                    navOpen={navOpen}
+                                    setNavOpen={setNavOpen}
+                                />
+                                <main className={classes.content}>
+                                    <Routes>
+                                        <Route
+                                            path="/login"
+                                            element={
+                                                <LoginPage
+                                                    loggedIn={loggedIn}
+                                                    authenticating={authenticating}
+                                                />
+                                            }
+                                        />
+                                        <Route path="/" element={authed(<Messages />)} />
+                                        <Route
+                                            path="/messages/:id"
+                                            element={authed(<Messages />)}
+                                        />
+                                        <Route
+                                            path="/applications"
+                                            element={authed(<Applications />)}
+                                        />
+                                        <Route path="/clients" element={authed(<Clients />)} />
+                                        <Route path="/users" element={authed(<Users />)} />
+                                        <Route path="/blacklist" element={authed(<Blacklist />)} />
+                                        <Route path="/plugins" element={authed(<Plugins />)} />
+                                        <Route
+                                            path="/plugins/:id"
+                                            element={authed(
+                                                <Lazy
+                                                    component={() =>
+                                                        import('../plugin/PluginDetailView')
+                                                    }
+                                                />
+                                            )}
+                                        />
+                                    </Routes>
+                                </main>
+                            </div>
+                            {showSettings && (
+                                <SettingsDialog fClose={() => setShowSettings(false)} />
+                            )}
+                            <ScrollUpButton />
+                            <SnackbarProvider />
                         </div>
-                        {showSettings && (
-                            <SettingsDialog fClose={() => setShowSettings(false)} />
-                        )}
-                        <ScrollUpButton />
-                        <SnackbarProvider />
                     </div>
                 </HashRouter>
             </ThemeProvider>
