@@ -22,7 +22,17 @@ server:
 
   responseheaders:
 
+  # ⚠️ 重要：trustedproxies 配置
+  # 格式说明：支持单个IP、CIDR网段，或YAML列表格式
+  # 推荐使用 YAML 列表格式（configor 库最佳支持）：
+  # trustedproxies:
+  #   - "127.0.0.1"
+  #   - "172.16.0.0/12"
+  #   - "192.168.0.0/16"
   trustedproxies:
+    - "127.0.0.1"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
 
   cors:
     alloworigins:
@@ -65,10 +75,13 @@ server:
     maxfailures: 5
     windowseconds: 300
     blockduration: 3600
-    cleanupinterval: 300
+    # ⚠️ 白名单配置：支持单个IP和CIDR网段
+    # 白名单IP不受速率限制和黑名单限制，请谨慎添加
     whitelist:
       - "127.0.0.1"
       - "192.168.1.0/24"
+      - "172.21.0.0/16"
+    cleanupinterval: 300
 
 database:
   dialect: sqlite3

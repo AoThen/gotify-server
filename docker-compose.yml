@@ -9,7 +9,7 @@
 #
 # 🚀 快速开始：
 #   1. 修改下面环境变量中的 GOTIFY_DEFAULTUSER_PASS（⚠️ 必须修改！）
-#   2. 运行：docker-compose up -d
+#   2. 运行：docker compose up -d
 #   3. 访问：http://localhost:80
 #   4. 默认凭证：admin / admin（⚠️ 首次登录强制修改密码！）
 #
@@ -25,6 +25,14 @@
 #   4. 生产环境建议启用SSL/TLS
 #   5. 考虑使用外部数据库（PostgreSQL/MySQL）
 #   6. 定期检查黑名单和速率限制日志
+#
+# 📝 配置说明：
+#   - 列表类型配置（如 trustedproxies, whitelist）必须使用 YAML 格式：
+#     GOTIFY_SERVER_TRUSTEDPROXIES: |
+#       - 127.0.0.1
+#       - 192.168.1.0/24
+#   - 不要使用数字后缀格式（如 _0, _1），configor 库不支持
+#   - 或使用 config.yml 配置文件进行配置
 
 services:
   gotify:
@@ -67,8 +75,10 @@ services:
       GOTIFY_SERVER_AUTHBLACKLIST_WINDOWSECONDS: "300"
       GOTIFY_SERVER_AUTHBLACKLIST_BLOCKDURATION: "3600"
       GOTIFY_SERVER_AUTHBLACKLIST_CLEANUPINTERVAL: "300"
-      GOTIFY_SERVER_AUTHBLACKLIST_WHITELIST_0: "127.0.0.1"
-      GOTIFY_SERVER_AUTHBLACKLIST_WHITELIST_1: "192.168.1.0/24"
+      GOTIFY_SERVER_AUTHBLACKLIST_WHITELIST: |
+        - 127.0.0.1
+        - 192.168.1.0/24
+        - 172.21.0.0/16
 
       # 数据库
       GOTIFY_DATABASE_DIALECT: "sqlite3"
@@ -88,9 +98,11 @@ services:
       GOTIFY_UPLOADEDIMAGESDIR: "/gotify/data/images/"
       GOTIFY_PLUGINSDIR: "/gotify/plugins/"
 
-      # 信任代理
-      # GOTIFY_SERVER_TRUSTEDPROXIES_0: "172.16.0.0/12"
-      # GOTIFY_SERVER_TRUSTEDPROXIES_1: "192.168.0.0/16"
+      # 信任代理（支持 Docker 和 Nginx 代理）
+      GOTIFY_SERVER_TRUSTEDPROXIES: |
+        - 127.0.0.1
+        - 172.16.0.0/12
+        - 192.168.0.0/16
 
     volumes:
       - gotify_data:/gotify/data
