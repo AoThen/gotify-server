@@ -30,15 +30,18 @@ const BlacklistRow: React.FC<{
     info: BlockedIPInfo;
     onUnblock: () => void;
 }> = ({info, onUnblock}) => {
+    const isExpired = info.expired;
     const now = new Date();
     const expiresAt = new Date(info.expiresAt);
-    const isExpired = now > expiresAt;
-    
+
     return (
-        <TableRow>
+        <TableRow sx={{
+            opacity: isExpired ? 0.6 : 1,
+            backgroundColor: isExpired ? 'action.disabledBackground' : 'inherit'
+        }}>
             <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
-                    <Block color="error" fontSize="small" />
+                    <Block color={isExpired ? "disabled" : "error"} fontSize="small" />
                     <Typography fontFamily="monospace">{info.ip}</Typography>
                 </Box>
             </TableCell>
@@ -47,13 +50,24 @@ const BlacklistRow: React.FC<{
                 {isExpired ? (
                     <Chip label="Expired" color="default" size="small" />
                 ) : (
-                    <Chip label={`${Math.ceil((expiresAt.getTime() - now.getTime()) / 60000)} min`} color="error" size="small" />
+                    <Box>
+                        <Chip label="Active" color="error" size="small" />
+                        <Typography variant="caption" display="block" sx={{mt: 0.5, color: 'text.secondary'}}>
+                            {`${Math.ceil((expiresAt.getTime() - now.getTime()) / 60000)} min remaining`}
+                        </Typography>
+                    </Box>
                 )}
             </TableCell>
             <TableCell>{info.reason}</TableCell>
             <TableCell align="right">
-                <IconButton onClick={onUnblock} className="unblock" size="large">
-                    <Delete />
+                <IconButton
+                    onClick={onUnblock}
+                    className="unblock"
+                    size="large"
+                    disabled={isExpired}
+                    title={isExpired ? "Already expired" : "Unblock IP"}
+                >
+                    <Delete color={isExpired ? "disabled" : "error"} />
                 </IconButton>
             </TableCell>
         </TableRow>
@@ -86,6 +100,9 @@ const Blacklist = observer(() => {
     const [whitelistEntry, setWhitelistEntry] = React.useState('');
     const [showClearConfirm, setShowClearConfirm] = React.useState(false);
 
+    const activeBlockedCount = blacklistStore.blacklist.blockedIPs.filter((ip: BlockedIPInfo) => !ip.expired).length;
+    const expiredBlockedCount = blacklistStore.blacklist.blockedIPs.filter((ip: BlockedIPInfo) => ip.expired).length;
+
     React.useEffect(() => {
         blacklistStore.refreshBlacklist();
         blacklistStore.refreshWhitelist();
@@ -117,10 +134,10 @@ const Blacklist = observer(() => {
                 <Paper elevation={6} style={{overflowX: 'auto', marginBottom: 16}}>
                     <Box p={2} bgcolor="error.light" borderRadius={1} mb={2}>
                         <Typography variant="subtitle1" fontWeight="bold">
-                            Blocked IPs ({blacklistStore.blacklist.blockedCount})
+                            Blocked IPs ({activeBlockedCount} active, {expiredBlockedCount} expired)
                         </Typography>
                         <Typography variant="caption">
-                            IPs are blocked after 5 failed login attempts within 5 minutes and will be unblocked after 1 hour.
+                            IPs are blocked after 5 failed login attempts within 5 minutes and will be unblocked after 1 hour. Expired entries are kept for reference.
                         </Typography>
                     </Box>
                     <Table id="blacklist-table">
@@ -128,7 +145,7 @@ const Blacklist = observer(() => {
                             <TableRow style={{textAlign: 'center'}}>
                                 <TableCell>IP Address</TableCell>
                                 <TableCell>Blocked At</TableCell>
-                                <TableCell>Expires In</TableCell>
+                                <TableCell>Status</TableCell>
                                 <TableCell>Reason</TableCell>
                                 <TableCell />
                             </TableRow>

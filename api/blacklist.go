@@ -41,14 +41,17 @@ func (b *BlacklistAPI) GetBlacklist(ctx *gin.Context) {
 		return
 	}
 
-	blockedIPs := b.Blacklist.GetBlockedIPs()
+	allBlockedIPs := b.Blacklist.GetAllBlockedIPs()
+	now := time.Now()
 	var blockedIPInfos []*model.BlockedIPInfo
-	for _, info := range blockedIPs {
+	for _, info := range allBlockedIPs {
+		isExpired := now.After(info.ExpiresAt)
 		blockedIPInfos = append(blockedIPInfos, &model.BlockedIPInfo{
 			IP:        info.IP,
 			BlockedAt: info.BlockedAt.Format(time.RFC3339),
 			ExpiresAt: info.ExpiresAt.Format(time.RFC3339),
 			Reason:    info.Reason,
+			Expired:   isExpired,
 		})
 	}
 

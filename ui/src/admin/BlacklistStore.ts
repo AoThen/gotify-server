@@ -8,6 +8,7 @@ export interface BlockedIPInfo {
     blockedAt: string;
     expiresAt: string;
     reason: string;
+    expired: boolean;
 }
 
 export interface BlacklistList {

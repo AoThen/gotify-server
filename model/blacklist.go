@@ -6,13 +6,14 @@ type BlockedIPInfo struct {
 	BlockedAt string `json:"blockedAt"`
 	ExpiresAt string `json:"expiresAt"`
 	Reason    string `json:"reason"`
+	Expired   bool   `json:"expired"`
 }
 
 // IPStatus represents the current status of an IP
 type IPStatus struct {
 	IP            string `json:"ip"`
 	IsBlocked     bool   `json:"isBlocked"`
-	IsWhitelisted bool  `json:"isWhitelisted"`
+	IsWhitelisted bool   `json:"isWhitelisted"`
 	FailureCount  int    `json:"failureCount,omitempty"`
 	ExpiresAt     string `json:"expiresAt,omitempty"`
 }

@@ -224,6 +224,17 @@ func (ab *AuthBlacklist) GetBlockedIPs() []*BlockedIP {
 	return blocked
 }
 
+func (ab *AuthBlacklist) GetAllBlockedIPs() []*BlockedIP {
+	ab.mu.RLock()
+	defer ab.mu.RUnlock()
+
+	var allBlocked []*BlockedIP
+	for _, info := range ab.blocked {
+		allBlocked = append(allBlocked, info)
+	}
+	return allBlocked
+}
+
 func (ab *AuthBlacklist) GetFailureCount(ip string) int {
 	ab.mu.RLock()
 	defer ab.mu.RUnlock()
