@@ -20,14 +20,21 @@ export class WebSocketStore {
 
     @action
     public listen = (callback: (msg: IMessage) => void) => {
-        if (!this.currentUser.token() || this.wsActive) {
+        if (this.wsActive) {
             return;
         }
+
+        const token = this.currentUser.token();
+        if (!token) {
+            setTimeout(() => this.listen(callback), 100);
+            return;
+        }
+
         this.wsActive = true;
         this.currentCallback = callback;
 
         const wsUrl = config.get('url').replace('http', 'ws').replace('https', 'wss');
-        const ws = new WebSocket(wsUrl + 'stream?token=' + this.currentUser.token());
+        const ws = new WebSocket(wsUrl + 'stream?token=' + token);
 
         ws.onerror = (e) => {
             console.log('WebSocket connection errored', e);

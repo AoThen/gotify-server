@@ -54,7 +54,9 @@ const initStores = (): StoreMapping => {
 
     registerReactions(stores);
 
-    stores.currentUser.tryAuthenticate().catch(() => {});
+    stores.currentUser.tryAuthenticate().finally(() => {
+        registerReactions(stores);
+    });
 
     window.onbeforeunload = () => {
         stores.wsStore.close();

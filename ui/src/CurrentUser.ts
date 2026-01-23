@@ -95,7 +95,8 @@ export class CurrentUser {
 
     @action
     public tryAuthenticate = async (): Promise<AxiosResponse<IUser>> => {
-        if (this.token() === '') {
+        this.token();
+        if (this.tokenCache === null || this.token() === '') {
             this.authenticating = false;
             return Promise.reject();
         }

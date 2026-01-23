@@ -95,6 +95,9 @@ services:
     volumes:
       - gotify_data:/gotify/data
 
+    tmpfs:
+      - /tmp
+
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
       interval: 30s
@@ -129,11 +132,6 @@ services:
 
 volumes:
   gotify_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${GOTIFY_DATA_PATH:-./data}
 
 networks:
   gotify_network:
