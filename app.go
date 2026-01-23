@@ -20,7 +20,7 @@ var (
 	// BuildDate the date on which this binary was build.
 	BuildDate = "unknown"
 	// Mode the build mode.
-	Mode = mode.Dev
+	Mode = mode.Prod
 )
 
 func main() {

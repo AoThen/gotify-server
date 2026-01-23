@@ -68,6 +68,7 @@ export class CurrentUser {
     public login = async (username: string, password: string) => {
         this.loggedIn = false;
         this.authenticating = true;
+        this.refreshKey++;
         const browser = detect();
         const name = (browser && browser.name + ' ' + browser.version) || 'unknown browser';
         axios
@@ -88,6 +89,7 @@ export class CurrentUser {
                 this.loggedIn = false;
                 this.tokenCache = null;
                 window.localStorage.removeItem(tokenKey);
+                this.refreshKey++;
                 if (error) {
                     this.snack('Login failed');
                 }
@@ -99,6 +101,7 @@ export class CurrentUser {
         this.token();
         if (this.tokenCache === null || this.token() === '') {
             this.authenticating = false;
+            this.refreshKey++;
             return Promise.reject();
         }
 
@@ -111,10 +114,12 @@ export class CurrentUser {
                 this.authenticating = false;
                 this.connectionErrorMessage = null;
                 this.reconnectTime = 7500;
+                this.refreshKey++;
                 return passThrough;
             })
             .catch((error: AxiosError) => {
                 this.authenticating = false;
+                this.refreshKey++;
                 if (!error || !error.response) {
                     this.connectionError('No network connection or server unavailable.');
                     return Promise.reject(error);
@@ -149,6 +154,7 @@ export class CurrentUser {
         window.localStorage.removeItem(tokenKey);
         this.tokenCache = null;
         this.loggedIn = false;
+        this.refreshKey++;
     };
 
     public changePassword = (pass: string) => {
