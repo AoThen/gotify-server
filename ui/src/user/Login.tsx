@@ -8,19 +8,12 @@ import * as config from '../config';
 import RegistrationDialog from './Register';
 import {useStores} from '../stores';
 import {observer} from 'mobx-react-lite';
-import {useNavigate} from 'react-router';
 
 const Login = observer(() => {
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [registerDialog, setRegisterDialog] = React.useState(false);
     const {currentUser} = useStores();
-    const navigate = useNavigate();
-    React.useEffect(() => {
-        if (currentUser.loggedIn) {
-            navigate('/');
-        }
-    }, [currentUser.loggedIn]);
     const registerButton = () => {
         if (config.get('register'))
             return (
@@ -36,11 +29,7 @@ const Login = observer(() => {
     };
     const login = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        currentUser.login(username, password).then(() => {
-            if (currentUser.loggedIn) {
-                navigate('/');
-            }
-        });
+        currentUser.login(username, password);
     };
     return (
         <DefaultPage title="Login" rightControl={registerButton()} maxWidth={250}>

@@ -8,7 +8,7 @@ import {
 import {makeStyles} from 'tss-react/mui';
 import CssBaseline from '@mui/material/CssBaseline';
 import * as React from 'react';
-import {HashRouter, Navigate, Route, Routes} from 'react-router-dom';
+import {HashRouter, Navigate, Route, Routes, useNavigate} from 'react-router-dom';
 import Header from './Header';
 import Navigation from './Navigation';
 import ScrollUpButton from '../common/ScrollUpButton';
@@ -127,7 +127,15 @@ const Layout = observer(() => {
                                 />
                                 <main className={classes.content}>
                                     <Routes>
-                                        <Route path="/login" element={<Login />} />
+                                        <Route
+                                            path="/login"
+                                            element={
+                                                <LoginPage
+                                                    loggedIn={loggedIn}
+                                                    authenticating={authenticating}
+                                                />
+                                            }
+                                        />
                                         <Route path="/" element={authed(<Messages />)} />
                                         <Route
                                             path="/messages/:id"
@@ -175,6 +183,19 @@ const Lazy = ({component}: {component: () => Promise<{default: React.ComponentTy
             <Component />
         </React.Suspense>
     );
+};
+
+const LoginPage: React.FC<{loggedIn: boolean; authenticating: boolean}> = ({
+    loggedIn,
+    authenticating,
+}) => {
+    const navigate = useNavigate();
+    React.useEffect(() => {
+        if (loggedIn && !authenticating) {
+            navigate('/applications', {replace: true});
+        }
+    }, [loggedIn, authenticating, navigate]);
+    return <Login />;
 };
 
 const RequireAuth: React.FC<
