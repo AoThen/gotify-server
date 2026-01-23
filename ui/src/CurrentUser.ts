@@ -93,6 +93,7 @@ export class CurrentUser {
                 if (error) {
                     this.snack('Login failed');
                 }
+                return Promise.reject(error);
             });
     };
 
@@ -135,7 +136,10 @@ export class CurrentUser {
                 this.connectionErrorMessage = null;
 
                 if (error.response.status >= 400 && error.response.status < 500) {
-                    this.logout();
+                    this.authenticating = false;
+                    this.loggedIn = false;
+                    this.tokenCache = null;
+                    this.refreshKey++;
                 }
                 return Promise.reject(error);
             });

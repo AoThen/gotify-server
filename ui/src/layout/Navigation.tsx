@@ -18,6 +18,7 @@ import {DrawerProps} from '@mui/material/Drawer/Drawer';
 import CloseIcon from '@mui/icons-material/Close';
 import {makeStyles} from 'tss-react/mui';
 import {useStores} from '../stores';
+import * as config from '../config';
 
 const useStyles = makeStyles()((theme: Theme) => ({
     root: {
@@ -61,11 +62,11 @@ const Navigation = observer(({loggedIn, navOpen, setNavOpen}: IProps) => {
                       key={app.id}>
                       <ListItemButton>
                           <ListItemAvatar style={{minWidth: 42}}>
-                              <Avatar
-                                  style={{width: 32, height: 32}}
-                                  src={app.image}
-                                  variant="square"
-                              />
+                           <Avatar
+                                   style={{width: 32, height: 32}}
+                                   src={app.image ? config.get('url') + app.image : undefined}
+                                   variant="square"
+                               />
                           </ListItemAvatar>
                           <ListItemText primary={app.name} />
                       </ListItemButton>
