@@ -13,9 +13,12 @@ import {
     ListItemAvatar,
     Avatar,
     ListItemButton,
+    ListItemIcon,
 } from '@mui/material';
 import {DrawerProps} from '@mui/material/Drawer/Drawer';
 import CloseIcon from '@mui/icons-material/Close';
+import Block from '@mui/icons-material/Block';
+import Group from '@mui/icons-material/Group';
 import {makeStyles} from 'tss-react/mui';
 import {useStores} from '../stores';
 import * as config from '../config';
@@ -48,8 +51,10 @@ const Navigation = observer(({loggedIn, navOpen, setNavOpen}: IProps) => {
     const [showRequestNotification, setShowRequestNotification] =
         React.useState(mayAllowPermission);
     const {classes} = useStyles();
-    const {appStore} = useStores();
+    const stores = useStores();
+    const {appStore, currentUser} = stores;
     const apps = appStore.getItems();
+    const isAdmin = currentUser.user.admin;
 
     const userApps =
         apps.length === 0
@@ -82,6 +87,24 @@ const Navigation = observer(({loggedIn, navOpen, setNavOpen}: IProps) => {
         </ListItemButton>,
     ];
 
+    const adminItems = isAdmin ? (
+        <>
+            <Divider />
+            <Link className={classes.link} to="/users" onClick={() => setNavOpen(false)}>
+                <ListItemButton>
+                    <ListItemIcon><Group /></ListItemIcon>
+                    <ListItemText primary="Users" />
+                </ListItemButton>
+            </Link>
+            <Link className={classes.link} to="/blacklist" onClick={() => setNavOpen(false)}>
+                <ListItemButton>
+                    <ListItemIcon><Block /></ListItemIcon>
+                    <ListItemText primary="Blacklist" />
+                </ListItemButton>
+            </Link>
+        </>
+    ) : null;
+
     return (
         <ResponsiveDrawer
             classes={{root: classes.root, paper: classes.drawerPaper}}
@@ -96,6 +119,7 @@ const Navigation = observer(({loggedIn, navOpen, setNavOpen}: IProps) => {
             </Link>
             <Divider />
             <div>{loggedIn ? userApps : placeholderItems}</div>
+            {adminItems}
             <Divider />
             <Typography align="center" style={{marginTop: 10}}>
                 {showRequestNotification ? (

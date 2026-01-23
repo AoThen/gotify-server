@@ -13,6 +13,7 @@ import {UserStore} from './user/UserStore';
 import {MessagesStore} from './message/MessagesStore';
 import {ClientStore} from './client/ClientStore';
 import {PluginStore} from './plugin/PluginStore';
+import {BlacklistStore} from './admin/BlacklistStore';
 import {registerReactions} from './reactions';
 import {StoreContext, StoreMapping} from './stores';
 
@@ -33,6 +34,7 @@ const initStores = (): StoreMapping => {
     const clientStore = new ClientStore(snackManager.snack);
     const wsStore = new WebSocketStore(snackManager.snack, currentUser);
     const pluginStore = new PluginStore(snackManager.snack);
+    const blacklistStore = new BlacklistStore(snackManager.snack);
     appStore.onDelete = () => messagesStore.clearAll();
 
     return {
@@ -44,6 +46,7 @@ const initStores = (): StoreMapping => {
         clientStore,
         wsStore,
         pluginStore,
+        blacklistStore,
     };
 };
 

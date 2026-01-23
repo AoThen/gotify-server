@@ -20,6 +20,7 @@ import Plugins from '../plugin/Plugins';
 import Login from '../user/Login';
 import Messages from '../message/Messages';
 import Users from '../user/Users';
+import Blacklist from '../admin/Blacklist';
 import {observer} from 'mobx-react-lite';
 import {ConnectionErrorBanner} from '../common/ConnectionErrorBanner';
 import {useStores} from '../stores';
@@ -44,11 +45,17 @@ const localStorageThemeKey = 'gotify-theme';
 
 const Layout = observer(() => {
     const {currentUser} = useStores();
+    const loggedIn = currentUser.loggedIn;
+    const authenticating = currentUser.authenticating;
+    const user = currentUser.user;
+    const connectionErrorMessage = currentUser.connectionErrorMessage;
+
     const {classes} = useStyles();
     const [currentTheme, setCurrentTheme] = React.useState<ThemeKey>(() => {
         const stored = window.localStorage.getItem(localStorageThemeKey);
         return isThemeKey(stored) ? stored : 'system';
     });
+    const [, setTick] = React.useState(0);
     const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
     const paletteMode = currentTheme === 'system' ? (prefersDark ? 'dark' : 'light') : currentTheme;
     const theme = React.useMemo(
@@ -64,6 +71,10 @@ const Layout = observer(() => {
     const [navOpen, setNavOpen] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
 
+    React.useEffect(() => {
+        setTick(t => t + 1);
+    }, [loggedIn, authenticating]);
+
     const toggleTheme = () => {
         const nextMap: Record<ThemeKey, ThemeKey> = {
             dark: 'light',
@@ -76,10 +87,7 @@ const Layout = observer(() => {
     };
 
     const authed = (children: React.ReactNode) => (
-        <RequireAuth
-            loggedIn={currentUser.loggedIn}
-            authenticating={currentUser.authenticating}
-        >
+        <RequireAuth loggedIn={loggedIn} authenticating={authenticating}>
             {children}
         </RequireAuth>
     );
@@ -90,21 +98,21 @@ const Layout = observer(() => {
                 <HashRouter>
                     {/* This forces all components to fully rerender including useEffects.
                         The refreshKey is updated when store data was cleaned and pages should refetch their data. */}
-                    {!currentUser.connectionErrorMessage ? null : (
+                    {!connectionErrorMessage ? null : (
                         <ConnectionErrorBanner
                             height={64}
                             retry={() => currentUser.tryReconnect()}
-                            message={currentUser.connectionErrorMessage}
+                            message={connectionErrorMessage}
                         />
                     )}
                     <div style={{display: 'flex', flexDirection: 'column'}}>
                         <CssBaseline />
                         <Header
-                            admin={currentUser.user.admin}
-                            name={currentUser.user.name}
-                            style={{top: !currentUser.connectionErrorMessage ? 0 : 64}}
+                            admin={user.admin}
+                            name={user.name}
+                            style={{top: !connectionErrorMessage ? 0 : 64}}
                             version={version}
-                            loggedIn={currentUser.loggedIn}
+                            loggedIn={loggedIn}
                             themeMode={currentTheme}
                             toggleTheme={toggleTheme}
                             showSettings={() => setShowSettings(true)}
@@ -113,7 +121,7 @@ const Layout = observer(() => {
                         />
                         <div style={{display: 'flex'}}>
                             <Navigation
-                                loggedIn={currentUser.loggedIn}
+                                loggedIn={loggedIn}
                                 navOpen={navOpen}
                                 setNavOpen={setNavOpen}
                             />
@@ -123,8 +131,8 @@ const Layout = observer(() => {
                                         path="/login"
                                         element={
                                             <LoginPage
-                                                loggedIn={currentUser.loggedIn}
-                                                authenticating={currentUser.authenticating}
+                                                loggedIn={loggedIn}
+                                                authenticating={authenticating}
                                             />
                                         }
                                     />
@@ -139,6 +147,7 @@ const Layout = observer(() => {
                                     />
                                     <Route path="/clients" element={authed(<Clients />)} />
                                     <Route path="/users" element={authed(<Users />)} />
+                                    <Route path="/blacklist" element={authed(<Blacklist />)} />
                                     <Route path="/plugins" element={authed(<Plugins />)} />
                                     <Route
                                         path="/plugins/:id"
@@ -181,16 +190,14 @@ const LoginPage: React.FC<{loggedIn: boolean; authenticating: boolean}> = ({
     authenticating,
 }) => {
     const navigate = useNavigate();
-    const [isRedirecting, setIsRedirecting] = React.useState(false);
 
     React.useEffect(() => {
-        if (loggedIn && !authenticating && !isRedirecting) {
-            setIsRedirecting(true);
+        if (loggedIn && !authenticating) {
             navigate('/applications', {replace: true});
         }
-    }, [loggedIn, authenticating, isRedirecting, navigate]);
+    }, [loggedIn, authenticating, navigate]);
 
-    if (authenticating || isRedirecting) {
+    if (authenticating) {
         return <LoadingSpinner />;
     }
 

@@ -27,7 +27,7 @@ type AuthenticationSuite struct {
 func (s *AuthenticationSuite) SetupSuite() {
 	mode.Set(mode.TestDev)
 	s.DB = testdb.NewDB(s.T())
-	s.auth = &Auth{s.DB}
+	s.auth = &Auth{DB: s.DB}
 
 	s.DB.CreateUser(&model.User{
 		Name:         "existing",

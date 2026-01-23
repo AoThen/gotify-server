@@ -7,20 +7,21 @@ import DialogTitle from '@mui/material/DialogTitle';
 import React from 'react';
 
 interface IProps {
+    open?: boolean;
     title: string;
     text: string;
     fClose: VoidFunction;
     fOnSubmit: VoidFunction;
 }
 
-export default function ConfirmDialog({title, text, fClose, fOnSubmit}: IProps) {
+export default function ConfirmDialog({open = true, title, text, fClose, fOnSubmit}: IProps) {
     const submitAndClose = () => {
         fOnSubmit();
         fClose();
     };
     return (
         <Dialog
-            open={true}
+            open={open}
             onClose={fClose}
             aria-labelledby="form-dialog-title"
             className="confirm-dialog">

@@ -27,10 +27,32 @@ type Database interface {
 
 // Auth is the provider for authentication middleware.
 type Auth struct {
-	DB Database
+	DB        Database
+	Blacklist *AuthBlacklist
+}
+
+// SetBlacklist sets the blacklist for authentication
+func (a *Auth) SetBlacklist(blacklist *AuthBlacklist) {
+	a.Blacklist = blacklist
 }
 
 type authenticate func(tokenID string, user *model.User) (authenticated, success bool, userId uint, err error)
+
+// getClientIP 获取客户端IP
+func getClientIP(ctx *gin.Context) string {
+	// 先检查 X-Forwarded-For 头
+	if forwardedFor := ctx.GetHeader("X-Forwarded-For"); forwardedFor != "" {
+		// X-Forwarded-For 可能包含多个IP，第一个是真实客户端IP
+		parts := strings.Split(forwardedFor, ",")
+		return strings.TrimSpace(parts[0])
+	}
+	// 检查 X-Real-IP 头
+	if realIP := ctx.GetHeader("X-Real-IP"); realIP != "" {
+		return realIP
+	}
+	// 从 RemoteAddr 获取
+	return ctx.ClientIP()
+}
 
 // RequireAdmin returns a gin middleware which requires a client token or basic authentication header to be supplied
 // with the request. Also the authenticated user must be an administrator.
@@ -150,6 +172,25 @@ func (a *Auth) userFromBasicAuth(ctx *gin.Context) (*model.User, error) {
 
 func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// 检查黑名单
+		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+			clientIP := getClientIP(ctx)
+			if a.Blacklist.IsWhitelisted(clientIP) {
+				// IP 在白名单中，跳过黑名单检查
+			} else if a.Blacklist.IsBlocked(clientIP) {
+				blockedInfo := a.Blacklist.GetBlockedInfo(clientIP)
+				ctx.AbortWithStatusJSON(429, gin.H{
+					"error":            "Too Many Requests",
+					"errorDescription": "IP is temporarily blocked due to too many authentication failures",
+					"blockedUntil":     blockedInfo.ExpiresAt.Format(time.RFC3339),
+					"blockedIP":        clientIP,
+					"blockedAt":        blockedInfo.BlockedAt.Format(time.RFC3339),
+					"blockedReason":    blockedInfo.Reason,
+				})
+				return
+			}
+		}
+
 		token := a.tokenFromQueryOrHeader(ctx)
 		user, err := a.userFromBasicAuth(ctx)
 		if err != nil {
@@ -167,8 +208,23 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 				ctx.Next()
 				return
 			} else if authenticated {
+				// 认证失败，记录到黑名单
+				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+					clientIP := getClientIP(ctx)
+					if !a.Blacklist.IsWhitelisted(clientIP) {
+						a.Blacklist.RecordFailure(clientIP)
+					}
+				}
 				ctx.AbortWithError(403, errors.New("you are not allowed to access this api"))
 				return
+			}
+		}
+
+		// 没有提供有效的认证信息，记录到黑名单
+		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+			clientIP := getClientIP(ctx)
+			if !a.Blacklist.IsWhitelisted(clientIP) {
+				a.Blacklist.RecordFailure(clientIP)
 			}
 		}
 		ctx.AbortWithError(401, errors.New("you need to provide a valid access token or user credentials to access this api"))

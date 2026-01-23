@@ -7,6 +7,7 @@ import {ClientStore} from './client/ClientStore';
 import {AppStore} from './application/AppStore';
 import {WebSocketStore} from './message/WebSocketStore';
 import {PluginStore} from './plugin/PluginStore';
+import {BlacklistStore} from './admin/BlacklistStore';
 
 export interface StoreMapping {
     userStore: UserStore;
@@ -17,6 +18,7 @@ export interface StoreMapping {
     appStore: AppStore;
     pluginStore: PluginStore;
     wsStore: WebSocketStore;
+    blacklistStore: BlacklistStore;
 }
 
 export const StoreContext = React.createContext<StoreMapping | undefined>(undefined);
