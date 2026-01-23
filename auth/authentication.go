@@ -173,6 +173,14 @@ func (a *Auth) userFromBasicAuth(ctx *gin.Context) (*model.User, bool) {
 	}
 	return nil, false
 }
+func (a *Auth) recordAuthFailure(clientIP string, reason string) {
+	if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
+		if !a.Blacklist.IsWhitelisted(clientIP) {
+			log.Printf("[Auth] IP %s authentication failed: %s", clientIP, reason)
+			a.Blacklist.RecordFailure(clientIP)
+		}
+	}
+}
 
 func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -196,26 +204,15 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 		}
 
 		token := a.tokenFromQueryOrHeader(ctx)
-		user, authValid := a.userFromBasicAuth(ctx)
+		user, _ := a.userFromBasicAuth(ctx)
 
-		if !authValid && token == "" {
-			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-				if !a.Blacklist.IsWhitelisted(clientIP) {
-					log.Printf("[Auth] IP %s authentication failed: no valid credentials provided", clientIP)
-					a.Blacklist.RecordFailure(clientIP)
-				}
-			}
-		}
+		recordedFailure := false
 
 		if user != nil || token != "" {
 			authenticated, ok, userID, err := auth(token, user)
 			if err != nil {
-				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-					if !a.Blacklist.IsWhitelisted(clientIP) {
-						log.Printf("[Auth] IP %s authentication failed: invalid token or credentials", clientIP)
-						a.Blacklist.RecordFailure(clientIP)
-					}
-				}
+				a.recordAuthFailure(clientIP, "invalid token or credentials")
+				recordedFailure = true
 				ctx.AbortWithError(401, errors.New("invalid token or credentials"))
 				return
 			} else if ok {
@@ -226,22 +223,15 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 				ctx.Next()
 				return
 			} else if authenticated {
-				if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-					if !a.Blacklist.IsWhitelisted(clientIP) {
-						log.Printf("[Auth] IP %s authentication failed: insufficient permissions", clientIP)
-						a.Blacklist.RecordFailure(clientIP)
-					}
-				}
+				a.recordAuthFailure(clientIP, "insufficient permissions")
+				recordedFailure = true
 				ctx.AbortWithError(403, errors.New("you are not allowed to access this api"))
 				return
 			}
 		}
 
-		if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-			if !a.Blacklist.IsWhitelisted(clientIP) {
-				log.Printf("[Auth] IP %s authentication failed: no valid credentials provided", clientIP)
-				a.Blacklist.RecordFailure(clientIP)
-			}
+		if !recordedFailure {
+			a.recordAuthFailure(clientIP, "no valid credentials provided")
 		}
 		ctx.AbortWithError(401, errors.New("you need to provide a valid access token or user credentials to access this api"))
 	}
@@ -287,12 +277,7 @@ func (a *Auth) Optional() gin.HandlerFunc {
 				ctx.Next()
 				return
 			}
-			if a.Blacklist != nil && a.Blacklist.GetConfig().Enabled {
-				if !a.Blacklist.IsWhitelisted(clientIP) {
-					log.Printf("[Auth] IP %s authentication failed: invalid token", clientIP)
-					a.Blacklist.RecordFailure(clientIP)
-				}
-			}
+			a.recordAuthFailure(clientIP, "invalid token")
 		}
 		RegisterAuthentication(ctx, nil, 0, "")
 		ctx.Next()
