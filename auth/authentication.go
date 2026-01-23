@@ -216,7 +216,9 @@ func (a *Auth) requireToken(auth authenticate) gin.HandlerFunc {
 				ctx.AbortWithError(401, errors.New("invalid token or credentials"))
 				return
 			} else if ok {
-				a.Blacklist.ClearFailures(clientIP)
+				if a.Blacklist != nil {
+					a.Blacklist.ClearFailures(clientIP)
+				}
 				RegisterAuthentication(ctx, user, userID, token)
 				ctx.Next()
 				return
@@ -265,13 +267,17 @@ func (a *Auth) Optional() gin.HandlerFunc {
 		user, authValid := a.userFromBasicAuth(ctx)
 
 		if user != nil && authValid {
-			a.Blacklist.ClearFailures(clientIP)
+			if a.Blacklist != nil {
+				a.Blacklist.ClearFailures(clientIP)
+			}
 			RegisterAuthentication(ctx, user, user.ID, token)
 			ctx.Next()
 			return
 		} else if token != "" {
 			if tokenClient, err := a.DB.GetClientByToken(token); err == nil && tokenClient != nil {
-				a.Blacklist.ClearFailures(clientIP)
+				if a.Blacklist != nil {
+					a.Blacklist.ClearFailures(clientIP)
+				}
 				RegisterAuthentication(ctx, user, tokenClient.UserID, token)
 				ctx.Next()
 				return

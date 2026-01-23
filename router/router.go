@@ -150,6 +150,8 @@ func Create(db *database.GormDatabase, vInfo *model.VersionInfo, conf *config.Co
 		authBlacklist = auth.NewAuthBlacklist(blacklistConfig)
 	}
 
+	authentication.SetBlacklist(authBlacklist)
+
 	ui.Register(g, *vInfo, conf.Registration)
 
 	// Apply global rate limit to all requests
