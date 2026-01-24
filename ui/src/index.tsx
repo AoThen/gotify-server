@@ -60,9 +60,6 @@ const initStores = (): StoreMapping => {
     stores.currentUser.tryAuthenticate()
         .catch(() => {
             console.log('Authentication failed');
-        })
-        .finally(() => {
-            registerReactions(stores);
         });
 
     window.onbeforeunload = () => {

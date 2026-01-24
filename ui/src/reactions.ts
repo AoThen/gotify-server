@@ -61,12 +61,11 @@ export const registerReactions = (stores: StoreMapping) => {
             () => stores.currentUser.loggedIn,
             (loggedIn) => {
                 if (loggedIn) {
-                    stores.currentUser.refreshKey++;
                     loadAll();
                 } else {
-                    stores.currentUser.refreshKey++;
                     clearAll();
                 }
+                stores.currentUser.refreshKey++;
             }
         )
     );

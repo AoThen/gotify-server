@@ -68,9 +68,7 @@ export class CurrentUser {
 
     @action
     public login = async (username: string, password: string) => {
-        this.loggedIn = false;
         this.authenticating = true;
-        this.refreshKey++;
         const browser = detect();
         const name = (browser && browser.name + ' ' + browser.version) || 'unknown browser';
         return axios
@@ -175,6 +173,10 @@ export class CurrentUser {
             if (!quiet) {
                 this.snack('Reconnect failed');
             }
+            action(() => {
+                this.loggedIn = false;
+                this.refreshKey++;
+            })();
         });
     };
 
