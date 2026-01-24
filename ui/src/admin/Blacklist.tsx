@@ -100,8 +100,8 @@ const Blacklist = observer(() => {
     const [whitelistEntry, setWhitelistEntry] = React.useState('');
     const [showClearConfirm, setShowClearConfirm] = React.useState(false);
 
-    const activeBlockedCount = blacklistStore.blacklist.blockedIPs.filter((ip: BlockedIPInfo) => !ip.expired).length;
-    const expiredBlockedCount = blacklistStore.blacklist.blockedIPs.filter((ip: BlockedIPInfo) => ip.expired).length;
+    const activeBlockedCount = blacklistStore.blacklist.blockedIPs?.filter((ip: BlockedIPInfo) => !ip.expired).length ?? 0;
+    const expiredBlockedCount = blacklistStore.blacklist.blockedIPs?.filter((ip: BlockedIPInfo) => ip.expired).length ?? 0;
 
     React.useEffect(() => {
         blacklistStore.refreshBlacklist();
@@ -151,7 +151,7 @@ const Blacklist = observer(() => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {blacklistStore.blacklist.blockedIPs.length === 0 ? (
+                            {blacklistStore.blacklist.blockedIPs?.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} align="center">
                                         <Typography color="textSecondary" py={4}>
@@ -160,7 +160,7 @@ const Blacklist = observer(() => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                blacklistStore.blacklist.blockedIPs.map((info: BlockedIPInfo) => (
+                                blacklistStore.blacklist.blockedIPs?.map((info: BlockedIPInfo) => (
                                     <BlacklistRow
                                         key={info.ip}
                                         info={info}
@@ -175,7 +175,7 @@ const Blacklist = observer(() => {
                 <Paper elevation={6} style={{overflowX: 'auto'}}>
                     <Box p={2} bgcolor="warning.light" borderRadius={1} mb={2}>
                         <Typography variant="subtitle1" fontWeight="bold">
-                            Whitelist ({blacklistStore.whitelist.count})
+                            Whitelist ({blacklistStore.whitelist.count ?? 0})
                         </Typography>
                         <Typography variant="caption">
                             Whitelisted IPs will never be blocked.
@@ -189,7 +189,7 @@ const Blacklist = observer(() => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {blacklistStore.whitelist.entries.length === 0 ? (
+                            {blacklistStore.whitelist.entries?.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={2} align="center">
                                         <Typography color="textSecondary" py={4}>
@@ -198,7 +198,7 @@ const Blacklist = observer(() => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                blacklistStore.whitelist.entries.map((entry: string) => (
+                                blacklistStore.whitelist.entries?.map((entry: string) => (
                                     <WhitelistRow
                                         key={entry}
                                         entry={entry}
