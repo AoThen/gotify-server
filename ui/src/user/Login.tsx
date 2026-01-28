@@ -14,6 +14,15 @@ const Login = observer(() => {
     const [password, setPassword] = React.useState('');
     const [registerDialog, setRegisterDialog] = React.useState(false);
     const {currentUser} = useStores();
+
+    const canSubmit = React.useMemo(() => {
+        return (
+            username.trim().length > 0 &&
+            password.length > 0 &&
+            !currentUser.authenticating
+        );
+    }, [username, password, currentUser.authenticating]);
+
     const registerButton = () => {
         if (config.get('register'))
             return (
@@ -29,7 +38,12 @@ const Login = observer(() => {
     };
     const login = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        currentUser.login(username, password);
+        if (canSubmit) {
+            console.log('[Login] Submitting login form');
+            currentUser.login(username, password);
+        } else {
+            console.log('[Login] Cannot submit - username or password empty');
+        }
     };
     return (
         <DefaultPage title="Login" rightControl={registerButton()} maxWidth={250}>
@@ -46,6 +60,7 @@ const Login = observer(() => {
                             autoComplete="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
+                            disabled={currentUser.authenticating}
                         />
                         <TextField
                             id="password"
@@ -57,6 +72,7 @@ const Login = observer(() => {
                             autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            disabled={currentUser.authenticating}
                         />
                         <Button
                             type="submit"
@@ -64,9 +80,7 @@ const Login = observer(() => {
                             size="large"
                             className="login"
                             color="primary"
-                            disabled={
-                                !!currentUser.connectionErrorMessage || currentUser.authenticating
-                            }
+                            disabled={!canSubmit}
                             style={{marginTop: 15, marginBottom: 5}}
                             loading={currentUser.authenticating}
                             onClick={login}>

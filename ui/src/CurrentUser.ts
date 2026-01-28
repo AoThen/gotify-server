@@ -69,8 +69,14 @@ export class CurrentUser {
     @action
     public login = async (username: string, password: string) => {
         this.authenticating = true;
+        this.connectionErrorMessage = null;
+        console.log('[Login] Starting login process for user:', username);
+
         const browser = detect();
         const name = (browser && browser.name + ' ' + browser.version) || 'unknown browser';
+        console.log('[Login] Browser:', name);
+        console.log('[Login] API URL:', config.get('url') + 'client');
+
         return axios
             .create()
             .request({
@@ -80,19 +86,39 @@ export class CurrentUser {
                 headers: {Authorization: 'Basic ' + btoa(username + ':' + password)},
             })
             .then((resp: AxiosResponse<IClient>) => {
+                console.log('[Login] Client creation successful, token received');
                 this.snack(`A client named '${name}' was created for your session.`);
                 this.setToken(resp.data.token);
                 return this.tryAuthenticate();
             })
-            .catch((error: Error) => {
+            .catch((error: AxiosError) => {
+                console.error('[Login] Login failed:', error.message);
+                console.error('[Login] Response status:', error.response?.status);
+                console.error('[Login] Response data:', error.response?.data);
+
                 this.authenticating = false;
                 this.loggedIn = false;
                 this.tokenCache = null;
                 window.localStorage.removeItem(tokenKey);
-                this.refreshKey++;
-                if (error) {
-                    this.snack('Login failed');
+
+                if (error.response) {
+                    const status = error.response.status;
+                    if (status === 401) {
+                        this.snack('Invalid username or password');
+                    } else if (status === 403) {
+                        this.snack('Access forbidden');
+                    } else if (status >= 500) {
+                        this.snack('Server error: ' + (error.response.statusText || 'Unknown error'));
+                    } else {
+                        this.snack('Login failed: ' + (error.response.data as any)?.error || error.message);
+                    }
+                } else if (!error.request) {
+                    this.snack('Network error: Request configuration error');
+                } else {
+                    this.snack('Network error: Server is not reachable. Please check your connection.');
                 }
+
+                this.refreshKey++;
                 return Promise.reject(error);
             });
     };
@@ -101,16 +127,19 @@ export class CurrentUser {
     public tryAuthenticate = async (): Promise<AxiosResponse<IUser>> => {
         this.token();
         if (this.tokenCache === null || this.token() === '') {
+            console.log('[Auth] No token available, skipping authentication');
             this.authenticating = false;
             this.loggedIn = false;
-            this.refreshKey++;
             return Promise.reject(new Error('No token'));
         }
+
+        console.log('[Auth] Attempting to authenticate with token:', this.token().substring(0, 10) + '...');
 
         return axios
             .create()
             .get(config.get('url') + 'current/user', {headers: {'X-Gotify-Key': this.token()}})
             .then((passThrough) => {
+                console.log('[Auth] Authentication successful for user:', passThrough.data.name);
                 this.user = passThrough.data;
                 this.loggedIn = true;
                 this.authenticating = false;
@@ -119,28 +148,33 @@ export class CurrentUser {
                 return passThrough;
             })
             .catch((error: AxiosError) => {
+                console.error('[Auth] Authentication failed:', error.message);
+                console.error('[Auth] Response status:', error.response?.status);
+
                 this.authenticating = false;
-                this.refreshKey++;
 
                 if (!error || !error.response) {
                     this.connectionError('No network connection or server unavailable.');
                     return Promise.reject(error);
                 }
 
-                if (error.response.status >= 500) {
+                const status = error.response.status;
+
+                if (status >= 500) {
                     this.connectionError(
-                        `${error.response.statusText} (code: ${error.response.status}).`
+                        `${error.response.statusText} (code: ${status}). Server may be temporarily unavailable.`
                     );
                     return Promise.reject(error);
                 }
 
                 this.connectionErrorMessage = null;
 
-                if (error.response.status >= 400 && error.response.status < 500) {
-                    this.authenticating = false;
+                if (status >= 400 && status < 500) {
                     this.loggedIn = false;
                     this.tokenCache = null;
+                    window.localStorage.removeItem(tokenKey);
                     this.refreshKey++;
+                    console.log('[Auth] Invalid credentials, cleared token');
                 }
                 return Promise.reject(error);
             });

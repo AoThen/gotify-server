@@ -51,6 +51,10 @@ const Layout = observer(() => {
     const connectionErrorMessage = currentUser.connectionErrorMessage;
     const refreshKey = currentUser.refreshKey;
 
+    React.useEffect(() => {
+        console.log('[Layout] Render with refreshKey:', refreshKey, 'loggedIn:', loggedIn, 'authenticating:', authenticating);
+    }, [refreshKey, loggedIn, authenticating]);
+
     const {classes} = useStyles();
     const [currentTheme, setCurrentTheme] = React.useState<ThemeKey>(() => {
         const stored = window.localStorage.getItem(localStorageThemeKey);
@@ -205,12 +209,25 @@ const LoginPage: React.FC<{loggedIn: boolean; authenticating: boolean}> = ({
 const RequireAuth: React.FC<
     React.PropsWithChildren<{loggedIn: boolean; authenticating: boolean}>
 > = ({children, authenticating, loggedIn}) => {
+    const [lastAuthenticating, setLastAuthenticating] = React.useState(authenticating);
+
+    React.useEffect(() => {
+        if (authenticating !== lastAuthenticating) {
+            console.log('[RequireAuth] authenticating changed:', authenticating);
+            setLastAuthenticating(authenticating);
+        }
+    }, [authenticating, lastAuthenticating]);
+
     if (authenticating) {
+        console.log('[RequireAuth] Showing loading spinner');
         return <LoadingSpinner />;
     }
+
     if (!loggedIn) {
+        console.log('[RequireAuth] Not logged in, redirecting to /login');
         return <Navigate replace={true} to="/login" />;
     }
+
     return <>{children}</>;
 };
 
