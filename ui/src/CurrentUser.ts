@@ -3,7 +3,7 @@ import * as config from './config';
 import {detect} from 'detect-browser';
 import {SnackReporter} from './snack/SnackManager';
 import {observable, makeObservable, action} from 'mobx';
-import {IClient, IUser} from './types';
+import {IClient, IUser, ApiErrorResponse} from './types';
 
 const tokenKey = 'gotify-login-key';
 
@@ -107,7 +107,7 @@ export class CurrentUser {
                     } else if (status >= 500) {
                         this.snack('Server error: ' + (error.response.statusText || 'Unknown error'));
                     } else {
-                        this.snack('Login failed: ' + (error.response.data as any)?.error || error.message);
+                        this.snack('Login failed: ' + (error.response.data as ApiErrorResponse)?.error || error.message);
                     }
                 } else if (!error.request) {
                     this.snack('Network error: Request configuration error');

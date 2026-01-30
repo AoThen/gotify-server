@@ -66,3 +66,8 @@ export interface IVersion {
     commit: string;
     buildDate: string;
 }
+
+export interface ApiErrorResponse {
+    error?: string;
+    errorDescription?: string;
+}

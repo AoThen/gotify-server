@@ -36,7 +36,7 @@ export class BlacklistStore {
         try {
             const response = await axios.get<BlacklistList>(`${config.get('url')}admin/blacklist`);
             this.blacklist = response.data;
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to load blacklist');
         } finally {
             this.loading = false;
@@ -48,7 +48,7 @@ export class BlacklistStore {
         try {
             const response = await axios.get<WhitelistInfo>(`${config.get('url')}admin/whitelist`);
             this.whitelist = response.data;
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to load whitelist');
         }
     };
@@ -58,7 +58,7 @@ export class BlacklistStore {
             await axios.delete(`${config.get('url')}admin/blacklist/${ip}`);
             this.snack(`IP ${ip} unblocked successfully`);
             await this.refreshBlacklist();
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to unblock IP');
         }
     };
@@ -68,7 +68,7 @@ export class BlacklistStore {
             await axios.post(`${config.get('url')}admin/blacklist/clear-all`);
             this.snack('Blacklist cleared successfully');
             await this.refreshBlacklist();
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to clear blacklist');
         }
     };
@@ -78,7 +78,7 @@ export class BlacklistStore {
             await axios.post(`${config.get('url')}admin/whitelist`, {entry});
             this.snack('Entry added to whitelist');
             await this.refreshWhitelist();
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to add to whitelist');
         }
     };
@@ -88,7 +88,7 @@ export class BlacklistStore {
             await axios.delete(`${config.get('url')}admin/whitelist/${entry}`);
             this.snack('Entry removed from whitelist');
             await this.refreshWhitelist();
-        } catch (error) {
+        } catch (_error) {
             this.snack('Failed to remove from whitelist');
         }
     };
