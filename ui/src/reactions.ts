@@ -62,10 +62,10 @@ export const registerReactions = (stores: StoreMapping) => {
             (loggedIn) => {
                 if (loggedIn) {
                     loadAll();
+                    stores.currentUser.refreshKey++;
                 } else {
                     clearAll();
                 }
-                stores.currentUser.refreshKey++;
             }
         )
     );

@@ -205,6 +205,7 @@ export class CurrentUser {
             }
             action(() => {
                 this.loggedIn = false;
+                this.authenticating = false;
                 this.refreshKey++;
             })();
         });

@@ -209,15 +209,6 @@ const LoginPage: React.FC<{loggedIn: boolean; authenticating: boolean}> = ({
 const RequireAuth: React.FC<
     React.PropsWithChildren<{loggedIn: boolean; authenticating: boolean}>
 > = ({children, authenticating, loggedIn}) => {
-    const [lastAuthenticating, setLastAuthenticating] = React.useState(authenticating);
-
-    React.useEffect(() => {
-        if (authenticating !== lastAuthenticating) {
-            console.log('[RequireAuth] authenticating changed:', authenticating);
-            setLastAuthenticating(authenticating);
-        }
-    }, [authenticating, lastAuthenticating]);
-
     if (authenticating) {
         console.log('[RequireAuth] Showing loading spinner');
         return <LoadingSpinner />;

@@ -10,6 +10,8 @@ export class WebSocketStore {
     private ws: WebSocket | null = null;
     private currentCallback: ((msg: IMessage) => void) | null = null;
     private reconnectTimeout: number | null = null;
+    private listenRetryCount = 0;
+    private readonly maxListenRetries = 50;
 
     public constructor(
         private readonly snack: SnackReporter,
@@ -26,10 +28,16 @@ export class WebSocketStore {
 
         const token = this.currentUser.token();
         if (!token) {
-            setTimeout(() => this.listen(callback), 100);
+            if (this.listenRetryCount < this.maxListenRetries) {
+                this.listenRetryCount++;
+                setTimeout(() => this.listen(callback), 100);
+            } else {
+                console.warn('[WebSocket] Max listen retries reached, stopping retry attempts');
+            }
             return;
         }
 
+        this.listenRetryCount = 0;
         this.wsActive = true;
         this.currentCallback = callback;
 

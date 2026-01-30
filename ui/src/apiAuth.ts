@@ -31,6 +31,7 @@ export const initAxios = (currentUser: CurrentUser, snack: SnackReporter) => {
                 snack('Authentication expired, please log in again.');
             }).catch((err) => {
                 console.error('[Axios] Re-authentication failed:', err);
+                currentUser.refreshKey++;
             });
         }
 
