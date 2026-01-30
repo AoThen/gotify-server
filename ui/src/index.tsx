@@ -16,6 +16,7 @@ import {PluginStore} from './plugin/PluginStore';
 import {BlacklistStore} from './admin/BlacklistStore';
 import {registerReactions} from './reactions';
 import {StoreContext, StoreMapping} from './stores';
+import logger from './utils/logger';
 
 const {port, hostname, protocol, pathname} = window.location;
 const slashes = protocol.concat('//');
@@ -59,7 +60,7 @@ const initStores = (): StoreMapping => {
 
     stores.currentUser.tryAuthenticate()
         .catch(() => {
-            console.log('Authentication failed');
+            logger.log('Authentication failed');
         });
 
     window.onbeforeunload = () => {

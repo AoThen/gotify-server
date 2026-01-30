@@ -29,7 +29,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 const BlacklistRow: React.FC<{
     info: BlockedIPInfo;
     onUnblock: () => void;
-}> = ({info, onUnblock}) => {
+}> = React.memo(({info, onUnblock}) => {
     const isExpired = info.expired;
     const now = new Date();
     const expiresAt = new Date(info.expiresAt);
@@ -72,12 +72,12 @@ const BlacklistRow: React.FC<{
             </TableCell>
         </TableRow>
     );
-};
+});
 
 const WhitelistRow: React.FC<{
     entry: string;
     onRemove: () => void;
-}> = ({entry, onRemove}) => (
+}> = React.memo(({entry, onRemove}) => (
     <TableRow>
         <TableCell>
             <Box display="flex" alignItems="center" gap={1}>
@@ -91,7 +91,7 @@ const WhitelistRow: React.FC<{
             </IconButton>
         </TableCell>
     </TableRow>
-);
+));
 
 const Blacklist = observer(() => {
     const {blacklistStore} = useStores();
@@ -106,7 +106,7 @@ const Blacklist = observer(() => {
     React.useEffect(() => {
         blacklistStore.refreshBlacklist();
         blacklistStore.refreshWhitelist();
-    }, [blacklistStore]);
+    }, []); // Empty dependency array - only run on mount
 
     return (
         <DefaultPage

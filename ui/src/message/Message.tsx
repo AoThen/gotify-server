@@ -114,7 +114,7 @@ const priorityColor = (priority: number) => {
     }
 };
 
-const Message = ({
+const Message = React.memo(function Message({
     fDelete,
     title,
     date,
@@ -125,7 +125,7 @@ const Message = ({
     appName,
     onExpand,
     expanded: initialExpanded,
-}: IProps) => {
+}: IProps) {
     const theme = useTheme();
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const {classes} = useStyles();
@@ -302,6 +302,6 @@ const HeaderSmall = ({
             </div>
         </div>
     );
-};
+});
 
 export default Message;

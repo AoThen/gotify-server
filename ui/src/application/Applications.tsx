@@ -183,7 +183,7 @@ interface IRowProps {
     fEdit: VoidFunction;
 }
 
-const Row = ({
+const Row = React.memo(function Row({
     name,
     value,
     noDelete,
@@ -195,7 +195,7 @@ const Row = ({
     fDeleteImage,
     image,
     fEdit,
-}: IRowProps) => {
+}: IRowProps) {
     const {classes} = useStyles();
     const isDefaultImage = image === 'static/defaultapp.png';
     return (
@@ -241,6 +241,6 @@ const Row = ({
             </TableCell>
         </TableRow>
     );
-};
+});
 
 export default Applications;

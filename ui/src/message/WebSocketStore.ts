@@ -4,6 +4,7 @@ import * as config from '../config';
 import {AxiosError} from 'axios';
 import {IMessage} from '../types';
 import {makeObservable, action} from 'mobx';
+import logger from '../utils/logger';
 
 export class WebSocketStore {
     private wsActive = false;
@@ -32,7 +33,7 @@ export class WebSocketStore {
                 this.listenRetryCount++;
                 setTimeout(() => this.listen(callback), 100);
             } else {
-                console.warn('[WebSocket] Max listen retries reached, stopping retry attempts');
+                logger.warn('[WebSocket] Max listen retries reached, stopping retry attempts');
             }
             return;
         }
@@ -45,7 +46,7 @@ export class WebSocketStore {
         const ws = new WebSocket(wsUrl + 'stream?token=' + token);
 
         ws.onerror = (e) => {
-            console.log('WebSocket connection errored', e);
+            logger.log('WebSocket connection errored', e);
             this.handleDisconnect();
         };
 

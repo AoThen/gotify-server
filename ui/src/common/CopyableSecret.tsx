@@ -5,6 +5,7 @@ import Copy from '@mui/icons-material/FileCopyOutlined';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import React, {CSSProperties} from 'react';
 import {useStores} from '../stores';
+import logger from '../utils/logger';
 
 interface IProps {
     value: string;
@@ -21,7 +22,7 @@ const CopyableSecret = ({value, style}: IProps) => {
             await navigator.clipboard.writeText(value);
             snackManager.snack('Copied to clipboard');
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
+            logger.error('Failed to copy to clipboard:', error);
             snackManager.snack('Failed to copy to clipboard');
         }
     };

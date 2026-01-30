@@ -4,6 +4,7 @@ import * as config from '../config';
 import {action, makeObservable} from 'mobx';
 import {SnackReporter} from '../snack/SnackManager';
 import {IApplication} from '../types';
+import logger from '../utils/logger';
 
 export class AppStore extends BaseStore<IApplication> {
     public onDelete: () => void = () => {};
@@ -45,7 +46,7 @@ export class AppStore extends BaseStore<IApplication> {
             await this.refresh();
             this.snack('Application image deleted');
         } catch (error) {
-            console.error('Error deleting application image:', error);
+            logger.error('Error deleting application image:', error);
             throw error;
         }
     }

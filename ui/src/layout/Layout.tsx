@@ -27,6 +27,7 @@ import {useStores} from '../stores';
 import {SnackbarProvider} from 'notistack';
 import LoadingSpinner from '../common/LoadingSpinner';
 import {isThemeKey, ThemeKey} from './theme';
+import logger from '../utils/logger';
 
 const useStyles = makeStyles()((theme: Theme) => ({
     content: {
@@ -52,7 +53,7 @@ const Layout = observer(() => {
     const refreshKey = currentUser.refreshKey;
 
     React.useEffect(() => {
-        console.log('[Layout] Render with refreshKey:', refreshKey, 'loggedIn:', loggedIn, 'authenticating:', authenticating);
+        logger.log('[Layout] Render with refreshKey:', refreshKey, 'loggedIn:', loggedIn, 'authenticating:', authenticating);
     }, [refreshKey, loggedIn, authenticating]);
 
     const {classes} = useStyles();
@@ -210,12 +211,12 @@ const RequireAuth: React.FC<
     React.PropsWithChildren<{loggedIn: boolean; authenticating: boolean}>
 > = ({children, authenticating, loggedIn}) => {
     if (authenticating) {
-        console.log('[RequireAuth] Showing loading spinner');
+        logger.log('[RequireAuth] Showing loading spinner');
         return <LoadingSpinner />;
     }
 
     if (!loggedIn) {
-        console.log('[RequireAuth] Not logged in, redirecting to /login');
+        logger.log('[RequireAuth] Not logged in, redirecting to /login');
         return <Navigate replace={true} to="/login" />;
     }
 

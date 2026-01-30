@@ -8,6 +8,7 @@ import * as config from '../config';
 import RegistrationDialog from './Register';
 import {useStores} from '../stores';
 import {observer} from 'mobx-react-lite';
+import logger from '../utils/logger';
 
 const Login = observer(() => {
     const [username, setUsername] = React.useState('');
@@ -39,10 +40,10 @@ const Login = observer(() => {
     const login = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         if (canSubmit) {
-            console.log('[Login] Submitting login form');
+            logger.log('[Login] Submitting login form');
             currentUser.login(username, password);
         } else {
-            console.log('[Login] Cannot submit - username or password empty');
+            logger.log('[Login] Cannot submit - username or password empty');
         }
     };
     return (

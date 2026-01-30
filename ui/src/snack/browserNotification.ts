@@ -1,6 +1,7 @@
 import Notify from 'notifyjs';
 import removeMarkdown from 'remove-markdown';
 import {IMessage} from '../types';
+import logger from '../utils/logger';
 
 export function mayAllowPermission(): boolean {
     return Notify.needsPermission && Notify.isSupported() && Notification.permission !== 'denied';
@@ -9,8 +10,8 @@ export function mayAllowPermission(): boolean {
 export function requestPermission() {
     if (Notify.needsPermission && Notify.isSupported()) {
         Notify.requestPermission(
-            () => console.log('granted notification permissions'),
-            () => console.log('notification permission denied')
+            () => logger.log('granted notification permissions'),
+            () => logger.log('notification permission denied')
         );
     }
 }

@@ -4,8 +4,11 @@ import {detect} from 'detect-browser';
 import {SnackReporter} from './snack/SnackManager';
 import {observable, makeObservable, action} from 'mobx';
 import {IClient, IUser, ApiErrorResponse} from './types';
+import logger from './utils/logger';
 
 const tokenKey = 'gotify-login-key';
+const tokenTimestampKey = 'gotify-login-key-timestamp';
+const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days default token expiry
 
 export class CurrentUser {
     @observable tokenCache: string | null = null;
@@ -24,6 +27,24 @@ export class CurrentUser {
     }
 
     @action
+    private readonly isTokenExpired = (): boolean => {
+        const timestamp = window.localStorage.getItem(tokenTimestampKey);
+        if (!timestamp) {
+            return false; // No timestamp means legacy token, don't expire
+        }
+        const tokenAge = Date.now() - parseInt(timestamp, 10);
+        return tokenAge > TOKEN_EXPIRY_MS;
+    };
+
+    @action
+    private readonly clearExpiredToken = (): void => {
+        this.tokenCache = null;
+        this.loggedIn = false;
+        window.localStorage.removeItem(tokenKey);
+        window.localStorage.removeItem(tokenTimestampKey);
+    };
+
+    @action
     public token = (): string => {
         if (this.tokenCache !== null) {
             return this.tokenCache;
@@ -31,6 +52,12 @@ export class CurrentUser {
 
         const localStorageToken = window.localStorage.getItem(tokenKey);
         if (localStorageToken) {
+            // Check if token is expired
+            if (this.isTokenExpired()) {
+                logger.log('[Token] Token expired, clearing');
+                this.clearExpiredToken();
+                return '';
+            }
             this.tokenCache = localStorageToken;
             return localStorageToken;
         }
@@ -42,6 +69,7 @@ export class CurrentUser {
     private readonly setToken = (token: string) => {
         this.tokenCache = token;
         window.localStorage.setItem(tokenKey, token);
+        window.localStorage.setItem(tokenTimestampKey, Date.now().toString());
     };
 
     public register = async (name: string, pass: string): Promise<boolean> =>
@@ -69,12 +97,12 @@ export class CurrentUser {
     public login = async (username: string, password: string) => {
         this.authenticating = true;
         this.connectionErrorMessage = null;
-        console.log('[Login] Starting login process for user:', username);
+        logger.log('[Login] Starting login process for user:', username);
 
         const browser = detect();
         const name = (browser && browser.name + ' ' + browser.version) || 'unknown browser';
-        console.log('[Login] Browser:', name);
-        console.log('[Login] API URL:', config.get('url') + 'client');
+        logger.log('[Login] Browser:', name);
+        logger.log('[Login] API URL:', config.get('url') + 'client');
 
         return axios.request({
             url: config.get('url') + 'client',
@@ -83,15 +111,15 @@ export class CurrentUser {
             headers: {Authorization: 'Basic ' + btoa(username + ':' + password)},
         })
             .then((resp: AxiosResponse<IClient>) => {
-                console.log('[Login] Client creation successful, token received');
+                logger.log('[Login] Client creation successful, token received');
                 this.snack(`A client named '${name}' was created for your session.`);
                 this.setToken(resp.data.token);
                 return this.tryAuthenticate();
             })
             .catch((error: AxiosError) => {
-                console.error('[Login] Login failed:', error.message);
-                console.error('[Login] Response status:', error.response?.status);
-                console.error('[Login] Response data:', error.response?.data);
+                logger.error('[Login] Login failed:', error.message);
+                logger.error('[Login] Response status:', error.response?.status);
+                logger.error('[Login] Response data:', error.response?.data);
 
                 this.authenticating = false;
                 this.loggedIn = false;
@@ -124,17 +152,17 @@ export class CurrentUser {
     public tryAuthenticate = async (): Promise<AxiosResponse<IUser>> => {
         this.token();
         if (this.tokenCache === null || this.token() === '') {
-            console.log('[Auth] No token available, skipping authentication');
+            logger.log('[Auth] No token available, skipping authentication');
             this.authenticating = false;
             this.loggedIn = false;
             return Promise.reject(new Error('No token'));
         }
 
-        console.log('[Auth] Attempting to authenticate with token:', this.token().substring(0, 10) + '...');
+        logger.log('[Auth] Attempting to authenticate with token:', this.token().substring(0, 10) + '...');
 
         return axios.get(config.get('url') + 'current/user', {headers: {'X-Gotify-Key': this.token()}})
             .then((passThrough) => {
-                console.log('[Auth] Authentication successful for user:', passThrough.data.name);
+                logger.log('[Auth] Authentication successful for user:', passThrough.data.name);
                 this.user = passThrough.data;
                 this.loggedIn = true;
                 this.authenticating = false;
@@ -143,8 +171,8 @@ export class CurrentUser {
                 return passThrough;
             })
             .catch((error: AxiosError) => {
-                console.error('[Auth] Authentication failed:', error.message);
-                console.error('[Auth] Response status:', error.response?.status);
+                logger.error('[Auth] Authentication failed:', error.message);
+                logger.error('[Auth] Response status:', error.response?.status);
 
                 this.authenticating = false;
 
@@ -169,7 +197,7 @@ export class CurrentUser {
                     this.tokenCache = null;
                     window.localStorage.removeItem(tokenKey);
                     this.refreshKey++;
-                    console.log('[Auth] Invalid credentials, cleared token');
+                    logger.log('[Auth] Invalid credentials, cleared token');
                 }
                 return Promise.reject(error);
             });
@@ -189,6 +217,7 @@ export class CurrentUser {
             })
             .catch(() => Promise.resolve());
         window.localStorage.removeItem(tokenKey);
+        window.localStorage.removeItem(tokenTimestampKey);
         this.tokenCache = null;
     };
 
