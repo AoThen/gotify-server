@@ -1,4 +1,4 @@
-const isDevelopment = import.meta.env.DEV;
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 export const logger = {
     log: (...args: unknown[]) => {
