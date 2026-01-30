@@ -93,7 +93,6 @@ export class CurrentUser {
                 return false;
             });
 
-    @action
     public login = async (username: string, password: string) => {
         this.authenticating = true;
         this.connectionErrorMessage = null;
@@ -148,7 +147,6 @@ export class CurrentUser {
             });
     };
 
-    @action
     public tryAuthenticate = async (): Promise<AxiosResponse<IUser>> => {
         this.token();
         if (this.tokenCache === null || this.token() === '') {
@@ -203,7 +201,6 @@ export class CurrentUser {
             });
     };
 
-    @action
     public logout = async () => {
         this.loggedIn = false;
         this.authenticating = false;
@@ -232,11 +229,9 @@ export class CurrentUser {
             if (!quiet) {
                 this.snack('Reconnect failed');
             }
-            action(() => {
-                this.loggedIn = false;
-                this.authenticating = false;
-                this.refreshKey++;
-            })();
+            this.loggedIn = false;
+            this.authenticating = false;
+            this.refreshKey++;
         });
     };
 
