@@ -46,7 +46,6 @@ export class CurrentUser {
 
     public register = async (name: string, pass: string): Promise<boolean> =>
         axios
-            .create()
             .post(config.get('url') + 'user', {name, pass})
             .then(async () => {
                 this.snack('User Created. Logging in...');
@@ -77,14 +76,12 @@ export class CurrentUser {
         console.log('[Login] Browser:', name);
         console.log('[Login] API URL:', config.get('url') + 'client');
 
-        return axios
-            .create()
-            .request({
-                url: config.get('url') + 'client',
-                method: 'POST',
-                data: {name},
-                headers: {Authorization: 'Basic ' + btoa(username + ':' + password)},
-            })
+        return axios.request({
+            url: config.get('url') + 'client',
+            method: 'POST',
+            data: {name},
+            headers: {Authorization: 'Basic ' + btoa(username + ':' + password)},
+        })
             .then((resp: AxiosResponse<IClient>) => {
                 console.log('[Login] Client creation successful, token received');
                 this.snack(`A client named '${name}' was created for your session.`);
@@ -135,9 +132,7 @@ export class CurrentUser {
 
         console.log('[Auth] Attempting to authenticate with token:', this.token().substring(0, 10) + '...');
 
-        return axios
-            .create()
-            .get(config.get('url') + 'current/user', {headers: {'X-Gotify-Key': this.token()}})
+        return axios.get(config.get('url') + 'current/user', {headers: {'X-Gotify-Key': this.token()}})
             .then((passThrough) => {
                 console.log('[Auth] Authentication successful for user:', passThrough.data.name);
                 this.user = passThrough.data;
@@ -183,6 +178,7 @@ export class CurrentUser {
     @action
     public logout = async () => {
         this.loggedIn = false;
+        this.authenticating = false;
         this.refreshKey++;
         await axios
             .get(config.get('url') + 'client')
